@@ -143,24 +143,24 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <Navigation />
       
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Configure your fire safety system</p>
+      <main className="container mx-auto px-4 py-6 md:py-8">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold">Settings</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Configure your fire safety system</p>
         </div>
 
-        <Tabs defaultValue="thresholds" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="thresholds">
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              Alert Thresholds
+        <Tabs defaultValue="thresholds" className="space-y-4 md:space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="thresholds" className="text-xs sm:text-sm">
+              <AlertTriangle className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Alert </span>Thresholds
             </TabsTrigger>
-            <TabsTrigger value="notifications">
-              <Bell className="h-4 w-4 mr-2" />
+            <TabsTrigger value="notifications" className="text-xs sm:text-sm">
+              <Bell className="h-4 w-4 mr-1 sm:mr-2" />
               Notifications
             </TabsTrigger>
-            <TabsTrigger value="database">
-              <Database className="h-4 w-4 mr-2" />
+            <TabsTrigger value="database" className="text-xs sm:text-sm">
+              <Database className="h-4 w-4 mr-1 sm:mr-2" />
               Database
             </TabsTrigger>
           </TabsList>

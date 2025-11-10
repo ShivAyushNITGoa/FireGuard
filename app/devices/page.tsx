@@ -94,11 +94,11 @@ export default function DevicesPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <Navigation />
       
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+      <main className="container mx-auto px-4 py-6 md:py-8">
+        <div className="flex items-center justify-between mb-6 md:mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Devices</h1>
-            <p className="text-muted-foreground">Manage your ESP32 fire safety devices</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Devices</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Manage your connected fire safety devices</p>
           </div>
           <Button>
             <Plus className="h-4 w-4 mr-2" />
@@ -121,7 +121,7 @@ export default function DevicesPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {devices.map((device) => (
               <Card key={device.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>

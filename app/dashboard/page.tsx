@@ -200,17 +200,17 @@ export default function AdvancedDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <Navigation />
       
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 md:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
             Advanced Fire Safety Dashboard
           </h1>
-          <p className="text-muted-foreground">Real-time monitoring with AI-powered analytics</p>
+          <p className="text-sm md:text-base text-muted-foreground">Real-time monitoring with AI-powered analytics</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
           <StatsCard
             title="Active Devices"
             value={stats.activeDevices}
@@ -243,7 +243,7 @@ export default function AdvancedDashboard() {
         </div>
 
         {/* Sensor Gauges */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
           <SensorGauge
             title="Gas / Smoke Level"
             value={latestData?.gas ?? null}
@@ -287,7 +287,7 @@ export default function AdvancedDashboard() {
         </div>
 
         {/* Fire Risk Prediction & Alert Timeline */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           <FireRiskPredictor />
           <AlertTimeline />
         </div>

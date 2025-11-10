@@ -125,11 +125,17 @@ export default function AnalyticsPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <Navigation />
       
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-6 md:py-8">
+        {/* Header */}
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            Analytics Dashboard
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground">Historical data analysis and insights</p>
+        </div>
+          
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold">Analytics</h1>
-            <p className="text-muted-foreground">Historical sensor data and trends</p>
           </div>
           
           <Tabs value={timeRange} onValueChange={setTimeRange}>
@@ -143,7 +149,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Alerts</CardTitle>
@@ -210,7 +216,7 @@ export default function AnalyticsPage() {
                   <p className="text-muted-foreground">No data available for this time range</p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={400}>
+                <ResponsiveContainer width="100%" height={300} className="sm:h-[400px]">
                   <AreaChart data={formatChartData()}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
