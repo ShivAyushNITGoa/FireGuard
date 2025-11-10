@@ -70,7 +70,7 @@ export function NotificationDropdown() {
       .from('alerts')
       .select('id, time, message, severity, acknowledged')
       .order('time', { ascending: false })
-      .limit(10)
+      .limit(10) as { data: Alert[] | null; error: any }
 
     if (data && !error) {
       setAlerts(data)
