@@ -87,7 +87,7 @@ export default function AdvancedDeviceManagement() {
     const { data } = await supabase
       .from('device_health')
       .select('*')
-      .order('timestamp', { ascending: false })
+      .order('timestamp', { ascending: false }) as { data: DeviceHealth[] | null; error: any }
 
     if (data) {
       const healthMap = new Map<string, DeviceHealth>()
