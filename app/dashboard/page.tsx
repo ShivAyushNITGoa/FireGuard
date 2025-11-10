@@ -126,7 +126,7 @@ export default function AdvancedDashboard() {
       .select('*')
       .order('time', { ascending: false })
       .limit(1)
-      .single()
+      .single() as { data: SensorData | null; error: any }
 
     if (data) {
       // Check if data is recent (within last 60 seconds)
@@ -165,14 +165,14 @@ export default function AdvancedDashboard() {
     const { data: alertsData } = await supabase
       .from('alerts')
       .select('severity')
-      .gte('time', twentyFourHoursAgo)
+      .gte('time', twentyFourHoursAgo) as { data: { severity: string }[] | null; error: any }
 
     // Get active devices based on recent sensor data (within last 60 seconds)
     const sixtySecondsAgo = new Date(Date.now() - 60 * 1000).toISOString()
     const { data: recentData } = await supabase
       .from('sensor_data')
       .select('device_id')
-      .gte('time', sixtySecondsAgo)
+      .gte('time', sixtySecondsAgo) as { data: { device_id: string }[] | null; error: any }
 
     // Count unique devices with recent data
     const uniqueDevices = new Set(recentData?.map(d => d.device_id) || [])
