@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Navigation } from '@/components/navigation'
+import { Footer } from '@/components/footer'
 import { Save, AlertTriangle, Bell, Database } from 'lucide-react'
 
 type DeviceSettings = {
@@ -489,6 +490,7 @@ export default function SettingsPage() {
           </TabsContent>
         </Tabs>
       </main>
+      <Footer />
     </div>
   )
 }

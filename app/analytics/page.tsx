@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Navigation } from '@/components/navigation'
+import { Footer } from '@/components/footer'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { TrendingUp, Activity, AlertTriangle, Calendar } from 'lucide-react'
@@ -206,7 +207,7 @@ export default function AnalyticsPage() {
               <CardTitle>All Sensor Readings</CardTitle>
               <CardDescription>Temperature, Gas, and Humidity over time</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               {loading ? (
                 <div className="h-[400px] flex items-center justify-center">
                   <p className="text-muted-foreground">Loading chart...</p>
@@ -216,7 +217,8 @@ export default function AnalyticsPage() {
                   <p className="text-muted-foreground">No data available for this time range</p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={300} className="sm:h-[400px]">
+                <div className="min-w-[600px]">
+                  <ResponsiveContainer width="100%" height={300} className="sm:h-[400px]">
                   <AreaChart data={formatChartData()}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
@@ -246,6 +248,7 @@ export default function AnalyticsPage() {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -408,6 +411,7 @@ export default function AnalyticsPage() {
           </Card>
         </div>
       </main>
+      <Footer />
     </div>
   )
 }

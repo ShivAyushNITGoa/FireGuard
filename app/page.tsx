@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import { Navigation } from '@/components/navigation'
+import { Footer } from '@/components/footer'
 import { Flame, Shield, Bell, BarChart3, Settings, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -99,13 +100,7 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="container mx-auto px-4 py-8 mt-20 border-t">
-        <div className="text-center text-muted-foreground">
-          <p>Built with ❤️ by TheGDevelopers</p>
-          <p className="text-sm mt-2">FireGuard v2.0 - Fire Safety Monitoring System</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

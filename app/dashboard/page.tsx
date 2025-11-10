@@ -9,6 +9,7 @@ import { StatsCard } from '@/components/stats-card'
 import { SensorGauge } from '@/components/sensor-gauge'
 import { AlertTimeline } from '@/components/alert-timeline'
 import { FireRiskPredictor } from '@/components/fire-risk-predictor'
+import { Footer } from '@/components/footer'
 import { startThresholdMonitoring, stopThresholdMonitoring } from '@/lib/threshold-monitor'
 import { Activity, AlertTriangle, Shield, Flame, Thermometer, Wind, Droplets } from 'lucide-react'
 
@@ -292,6 +293,7 @@ export default function AdvancedDashboard() {
           <AlertTimeline />
         </div>
       </main>
+      <Footer />
     </div>
   )
 }

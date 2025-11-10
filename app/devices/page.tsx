@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Navigation } from '@/components/navigation'
+import { Footer } from '@/components/footer'
 import { Cpu, MapPin, Clock, Plus, Power, Settings } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { startAutoOfflineDetection, stopAutoOfflineDetection, getDeviceStatus } from '@/lib/auto-offline-checker'
@@ -190,6 +191,7 @@ export default function DevicesPage() {
           </CardContent>
         </Card>
       </main>
+      <Footer />
     </div>
   )
 }
