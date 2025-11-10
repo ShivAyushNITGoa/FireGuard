@@ -103,22 +103,23 @@ export default function SettingsPage() {
         error = result.error
       } else {
         // Insert new record
+        const insertData: any = {
+          device_id: settings.device_id,
+          gas_warning_threshold: settings.gas_warning_threshold,
+          gas_danger_threshold: settings.gas_danger_threshold,
+          temp_warning_threshold: settings.temp_warning_threshold,
+          temp_danger_threshold: settings.temp_danger_threshold,
+          humidity_warning_threshold: settings.humidity_warning_threshold,
+          humidity_danger_threshold: settings.humidity_danger_threshold,
+          enable_gas_alerts: settings.enable_gas_alerts,
+          enable_temp_alerts: settings.enable_temp_alerts,
+          enable_flame_alerts: settings.enable_flame_alerts,
+          enable_buzzer: settings.enable_buzzer,
+          alert_cooldown_seconds: settings.alert_cooldown_seconds,
+        }
         const result = await supabase
           .from('device_settings')
-          .insert({
-            device_id: settings.device_id,
-            gas_warning_threshold: settings.gas_warning_threshold,
-            gas_danger_threshold: settings.gas_danger_threshold,
-            temp_warning_threshold: settings.temp_warning_threshold,
-            temp_danger_threshold: settings.temp_danger_threshold,
-            humidity_warning_threshold: settings.humidity_warning_threshold,
-            humidity_danger_threshold: settings.humidity_danger_threshold,
-            enable_gas_alerts: settings.enable_gas_alerts,
-            enable_temp_alerts: settings.enable_temp_alerts,
-            enable_flame_alerts: settings.enable_flame_alerts,
-            enable_buzzer: settings.enable_buzzer,
-            alert_cooldown_seconds: settings.alert_cooldown_seconds,
-          })
+          .insert(insertData)
         error = result.error
       }
 
