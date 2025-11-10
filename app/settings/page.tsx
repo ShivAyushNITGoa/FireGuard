@@ -83,7 +83,7 @@ export default function SettingsPage() {
       
       if (existing) {
         // Update existing record
-        const updateData: Partial<DeviceSettings> = {
+        const updateData = {
           gas_warning_threshold: settings.gas_warning_threshold,
           gas_danger_threshold: settings.gas_danger_threshold,
           temp_warning_threshold: settings.temp_warning_threshold,
@@ -96,14 +96,14 @@ export default function SettingsPage() {
           enable_buzzer: settings.enable_buzzer,
           alert_cooldown_seconds: settings.alert_cooldown_seconds,
         }
-        const result = await supabase
+        const result = await (supabase as any)
           .from('device_settings')
-          .update(updateData as any)
+          .update(updateData)
           .eq('device_id', settings.device_id)
         error = result.error
       } else {
         // Insert new record
-        const insertData: any = {
+        const insertData = {
           device_id: settings.device_id,
           gas_warning_threshold: settings.gas_warning_threshold,
           gas_danger_threshold: settings.gas_danger_threshold,
@@ -117,7 +117,7 @@ export default function SettingsPage() {
           enable_buzzer: settings.enable_buzzer,
           alert_cooldown_seconds: settings.alert_cooldown_seconds,
         }
-        const result = await supabase
+        const result = await (supabase as any)
           .from('device_settings')
           .insert(insertData)
         error = result.error
