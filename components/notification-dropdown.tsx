@@ -83,9 +83,9 @@ export function NotificationDropdown() {
     
     if (unacknowledgedIds.length === 0) return
 
-    await supabase
+    await (supabase as any)
       .from('alerts')
-      .update({ acknowledged: true, acknowledged_at: new Date().toISOString() } as any)
+      .update({ acknowledged: true, acknowledged_at: new Date().toISOString() })
       .in('id', unacknowledgedIds)
 
     setAlerts(prev => prev.map(a => ({ ...a, acknowledged: true })))
