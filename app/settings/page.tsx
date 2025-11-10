@@ -77,27 +77,28 @@ export default function SettingsPage() {
         .from('device_settings')
         .select('id')
         .eq('device_id', settings.device_id)
-        .single()
+        .single() as { data: { id: number } | null; error: any }
 
       let error
       
       if (existing) {
         // Update existing record
+        const updateData: Partial<DeviceSettings> = {
+          gas_warning_threshold: settings.gas_warning_threshold,
+          gas_danger_threshold: settings.gas_danger_threshold,
+          temp_warning_threshold: settings.temp_warning_threshold,
+          temp_danger_threshold: settings.temp_danger_threshold,
+          humidity_warning_threshold: settings.humidity_warning_threshold,
+          humidity_danger_threshold: settings.humidity_danger_threshold,
+          enable_gas_alerts: settings.enable_gas_alerts,
+          enable_temp_alerts: settings.enable_temp_alerts,
+          enable_flame_alerts: settings.enable_flame_alerts,
+          enable_buzzer: settings.enable_buzzer,
+          alert_cooldown_seconds: settings.alert_cooldown_seconds,
+        }
         const result = await supabase
           .from('device_settings')
-          .update({
-            gas_warning_threshold: settings.gas_warning_threshold,
-            gas_danger_threshold: settings.gas_danger_threshold,
-            temp_warning_threshold: settings.temp_warning_threshold,
-            temp_danger_threshold: settings.temp_danger_threshold,
-            humidity_warning_threshold: settings.humidity_warning_threshold,
-            humidity_danger_threshold: settings.humidity_danger_threshold,
-            enable_gas_alerts: settings.enable_gas_alerts,
-            enable_temp_alerts: settings.enable_temp_alerts,
-            enable_flame_alerts: settings.enable_flame_alerts,
-            enable_buzzer: settings.enable_buzzer,
-            alert_cooldown_seconds: settings.alert_cooldown_seconds,
-          })
+          .update(updateData as any)
           .eq('device_id', settings.device_id)
         error = result.error
       } else {
