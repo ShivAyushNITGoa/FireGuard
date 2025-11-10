@@ -258,7 +258,7 @@ export default function AnalyticsPage() {
               <CardTitle>Sensor Trends</CardTitle>
               <CardDescription>Individual sensor readings</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               {loading ? (
                 <div className="h-[300px] flex items-center justify-center">
                   <p className="text-muted-foreground">Loading chart...</p>
@@ -268,7 +268,8 @@ export default function AnalyticsPage() {
                   <p className="text-muted-foreground">No data available for this time range</p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={300}>
+                <div className="min-w-[600px]">
+                  <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={formatChartData()}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
@@ -301,6 +302,7 @@ export default function AnalyticsPage() {
                     />
                   </LineChart>
                 </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -310,7 +312,7 @@ export default function AnalyticsPage() {
               <CardTitle>Flame Detection Events</CardTitle>
               <CardDescription>Timeline of flame sensor activations</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               {loading ? (
                 <div className="h-[200px] flex items-center justify-center">
                   <p className="text-muted-foreground">Loading chart...</p>
@@ -320,7 +322,8 @@ export default function AnalyticsPage() {
                   <p className="text-muted-foreground">No data available for this time range</p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={200}>
+                <div className="min-w-[600px]">
+                  <ResponsiveContainer width="100%" height={200}>
                   <AreaChart data={formatChartData()}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
@@ -338,6 +341,7 @@ export default function AnalyticsPage() {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
+                </div>
               )}
               <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-950 rounded-md">
                 <p className="text-sm text-amber-800 dark:text-amber-200">
