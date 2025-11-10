@@ -79,9 +79,11 @@ export default function AdvancedAnalytics() {
       .limit(100)
 
     if (sensorDataResult) {
-      setSensorData(sensorDataResult.map(d => ({
-        ...d,
-        time: new Date(d.time).toLocaleTimeString()
+      setSensorData(sensorDataResult.map((d: any) => ({
+        time: new Date(d.time).toLocaleTimeString(),
+        gas: d.gas,
+        temp: d.temp,
+        flame: d.flame
       })))
     }
 
