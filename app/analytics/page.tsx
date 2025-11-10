@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Navigation } from '@/components/navigation'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { TrendingUp, Activity, AlertTriangle, Calendar } from 'lucide-react'
 
@@ -36,16 +36,12 @@ export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('24h')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchAnalytics()
-  }, [timeRange])
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     setLoading(true)
 
     // Calculate time range
     const now = new Date()
-    let startTime = new Date()
+    const startTime = new Date()
     switch (timeRange) {
       case '1h':
         startTime.setHours(now.getHours() - 1)
@@ -90,7 +86,11 @@ export default function AnalyticsPage() {
     }
 
     setLoading(false)
-  }
+  }, [timeRange])
+
+  useEffect(() => {
+    fetchAnalytics()
+  }, [fetchAnalytics])
 
   const formatChartData = () => {
     return sensorData.map(d => {
