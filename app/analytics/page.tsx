@@ -16,6 +16,10 @@ type SensorReading = {
   flame: number
 }
 
+type Alert = {
+  severity: 'critical' | 'high' | 'medium' | 'low'
+}
+
 type AlertStats = {
   total: number
   critical: number
@@ -72,7 +76,7 @@ export default function AnalyticsPage() {
     const { data: alerts, error: alertError } = await supabase
       .from('alerts')
       .select('severity')
-      .gte('time', startTime.toISOString())
+      .gte('time', startTime.toISOString()) as { data: Alert[] | null; error: any }
 
     if (alerts && !alertError) {
       const stats: AlertStats = {
