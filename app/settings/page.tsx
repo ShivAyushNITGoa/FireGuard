@@ -154,14 +154,13 @@ export default function SettingsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
+      // Update user_profiles with notification preferences
       const { error } = await supabase
-        .from('notification_preferences')
-        .upsert({
-          user_id: user.id,
-          email_enabled: notifications.email,
-          sms_enabled: notifications.sms,
-          push_enabled: notifications.push,
-        }, { onConflict: 'user_id' })
+        .from('user_profiles')
+        .update({
+          receive_alerts: notifications.email,
+        })
+        .eq('id', user.id)
 
       if (error) throw error
       setMessage('✓ Notification preferences saved successfully!')
