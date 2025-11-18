@@ -307,7 +307,12 @@ void loop() {
 
 // ==================== SENSOR FUNCTIONS ====================
 void readAndSendSensorData() {
-  Serial.println("\n📊 Reading sensors...");
+  unsigned long currentTime = millis();
+  Serial.println("\n╔════════════════════════════════════════╗");
+  Serial.println("║        📊 SENSOR DATA READING         ║");
+  Serial.println("╚════════════════════════════════════════╝");
+  Serial.printf("⏱️  Timestamp: %lu ms (%.1f seconds)\n", currentTime, currentTime / 1000.0);
+  Serial.printf("📍 Device ID: %s | Location: %s\n", DEVICE_ID, LOCATION);
   
   // Read sensors
   int smokeRaw = 0;
@@ -374,29 +379,57 @@ void readAndSendSensorData() {
     displayedHumidity = humidity;
   }
   
-  // Display readings
+  // Display readings with enhanced formatting
+  Serial.println("\n┌─ 🌫️  SMOKE/AIR QUALITY SENSOR (MQ135) ─┐");
   if (smokeDataValid) {
-    Serial.printf("  Smoke/Air Quality: %.0f\n", smoke);
+    Serial.printf("│ Status: ✓ Working\n");
+    Serial.printf("│ Raw Value: %d (0-4095)\n", smokeRaw);
+    Serial.printf("│ Calibrated: %.1f\n", smoke);
+    Serial.printf("│ Threshold: %d\n", SMOKE_THRESHOLD);
+    Serial.printf("│ Status: %s\n", smoke > SMOKE_THRESHOLD ? "⚠️  HIGH" : "✓ Normal");
   } else {
-    Serial.println("  Smoke: N/A (MQ135 not working)");
+    Serial.printf("│ Status: ❌ Not Working\n");
+    Serial.printf("│ Last Good Value: %.1f\n", lastGoodSmoke);
   }
+  Serial.println("└────────────────────────────────────────┘");
   
+  Serial.println("\n┌─ 🌡️  TEMPERATURE & HUMIDITY (DHT11) ─┐");
   if (dhtDataValid) {
-    Serial.printf("  Temp: %.1f°C\n", displayedTemp);
-    Serial.printf("  Humidity: %.1f%%\n", displayedHumidity);
+    Serial.printf("│ Status: ✓ Working\n");
+    Serial.printf("│ Temperature: %.1f°C\n", displayedTemp);
+    Serial.printf("│ Humidity: %.1f%%\n", displayedHumidity);
+    Serial.printf("│ Temp Threshold: %.1f°C\n", TEMP_THRESHOLD);
+    Serial.printf("│ Temp Status: %s\n", displayedTemp > TEMP_THRESHOLD ? "⚠️  HIGH" : "✓ Normal");
   } else {
-    Serial.println("  Temp: N/A (DHT11 not working)");
-    Serial.println("  Humidity: N/A (DHT11 not working)");
+    Serial.printf("│ Status: ❌ Not Working\n");
+    Serial.printf("│ Last Good Temp: %.1f°C\n", lastGoodTemp);
+    Serial.printf("│ Last Good Humidity: %.1f%%\n", lastGoodHumidity);
   }
+  Serial.println("└────────────────────────────────────────┘");
   
-  // Display flame status
+  Serial.println("\n┌─ 🔥 FLAME DETECTION SENSOR (IR) ─┐");
   if (flameRaw == -1) {
-    Serial.println("  Flame: N/A (sensor not working)");
+    Serial.println("│ Status: ❌ Not Installed");
   } else if (flameRaw == LOW) {
-    Serial.println("  Flame: DETECTED");
+    Serial.println("│ Status: ✓ Working");
+    Serial.println("│ Reading: 🔥 FLAME DETECTED!");
   } else {
-    Serial.println("  Flame: Clear");
+    Serial.println("│ Status: ✓ Working");
+    Serial.println("│ Reading: ✓ Clear (No flame)");
   }
+  Serial.println("└────────────────────────────────────────┘");
+  
+  // Read battery voltage
+  int batteryRaw = analogRead(BATTERY_PIN);
+  float batteryVoltage = (batteryRaw / 4095.0) * 3.3 * 2;  // Assuming voltage divider
+  Serial.println("\n┌─ 🔋 BATTERY & SYSTEM STATUS ─┐");
+  Serial.printf("│ Battery Voltage: %.2f V\n", batteryVoltage);
+  Serial.printf("│ Battery Status: %s\n", batteryVoltage < BATTERY_LOW_THRESHOLD ? "⚠️  LOW" : "✓ Good");
+  Serial.printf("│ WiFi Signal: %d dBm\n", WiFi.RSSI());
+  Serial.printf("│ WiFi Status: %s\n", WiFi.status() == WL_CONNECTED ? "✓ Connected" : "❌ Disconnected");
+  Serial.printf("│ Uptime: %lu seconds\n", (millis() - bootTime) / 1000);
+  Serial.printf("│ Error Count: %d\n", errorCount);
+  Serial.println("└────────────────────────────────────────┘");
   
   // Check for alerts and warnings
   bool alertTriggered = false;
@@ -445,10 +478,23 @@ void readAndSendSensorData() {
     alertActive = false;
     digitalWrite(WARNING_LED_PIN, LOW);
     digitalWrite(ALERT_LED_PIN, LOW);
+    Serial.println("\n✅ All sensors normal - No alerts");
   }
+  
+  // Print summary
+  Serial.println("\n╔════════════════════════════════════════╗");
+  Serial.println("║          📤 SENDING TO SUPABASE       ║");
+  Serial.println("╚════════════════════════════════════════╝");
+  Serial.printf("Smoke: %s | Flame: %s | Temp: %s | Alert: %s\n",
+    smokeDataValid ? "✓" : "✗",
+    flameRaw == -1 ? "N/A" : (flameRaw == LOW ? "🔥" : "✓"),
+    dhtDataValid ? "✓" : "✗",
+    alertTriggered ? "🚨 YES" : "✓ No"
+  );
   
   // Send to Supabase; send NAN as null by using JSON null when appropriate
   sendToSupabase(smoke, flameRaw, displayedTemp, displayedHumidity, alertTriggered, alertMessage, severity);
+  Serial.println("✓ Data sent to Supabase\n");
 }
 
 // sendToSupabase and related functions unchanged except they will receive NANs which we handle by sending nulls
