@@ -148,7 +148,15 @@ bool readDHTWithRetries(float &outTemp, float &outHumidity, int attempts = 1, in
 // ==================== SETUP ====================
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+  delay(500);
+  
+  // Print startup indicator immediately
+  Serial.println("\n\n");
+  Serial.println("╔════════════════════════════════════════╗");
+  Serial.println("║     🔥 FIREGUARD STARTING UP...       ║");
+  Serial.println("╚════════════════════════════════════════╝");
+  Serial.println("✓ Serial initialized at 115200 baud");
+  delay(500);
   
   printBanner();
   
@@ -272,8 +280,15 @@ void setup() {
 }
 
 // ==================== MAIN LOOP ====================
+unsigned long lastHeartbeat = 0;
 void loop() {
   unsigned long currentMillis = millis();
+  
+  // Print heartbeat every 10 seconds to show system is alive
+  if (currentMillis - lastHeartbeat >= 10000) {
+    lastHeartbeat = currentMillis;
+    Serial.printf("\n💓 Heartbeat - Uptime: %lu seconds\n", currentMillis / 1000);
+  }
   
   // Check WiFi connection
   if (WiFi.status() != WL_CONNECTED) {
@@ -500,15 +515,22 @@ void readAndSendSensorData() {
 // sendToSupabase and related functions unchanged except they will receive NANs which we handle by sending nulls
 void sendToSupabase(float smoke, int flame, float temp, float humidity, 
                     bool alert, String message, String severity) {
+  Serial.println("\n┌─ 🌐 SUPABASE TRANSMISSION ─┐");
+  
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("❌ WiFi not connected");
+    Serial.println("│ ❌ WiFi not connected");
+    Serial.println("└────────────────────────────┘");
     return;
   }
+  
+  Serial.println("│ ✓ WiFi connected");
   
   HTTPClient http;
   
   // Send sensor data
   String sensorUrl = String(supabaseUrl) + "/rest/v1/sensor_data";
+  Serial.println("│ URL: /rest/v1/sensor_data");
+  
   http.begin(sensorUrl);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("apikey", supabaseKey);
@@ -520,27 +542,35 @@ void sendToSupabase(float smoke, int flame, float temp, float humidity,
   // Send smoke data as 'gas' column (MQ135 smoke sensor data stored in gas field)
   if (!isnan(smoke)) {
     doc["gas"] = smoke;
+    Serial.printf("│ Gas: %.1f\n", smoke);
   } else {
     doc["gas"] = nullptr;
+    Serial.println("│ Gas: null");
   }
   
   // Only send flame if sensor is working (flame != -1)
   if (flame != -1) {
     doc["flame"] = flame;
+    Serial.printf("│ Flame: %d\n", flame);
   } else {
     doc["flame"] = nullptr;
+    Serial.println("│ Flame: null");
   }
   
   // Only send temp/humidity if valid (not NAN)
   if (!isnan(temp)) {
     doc["temp"] = temp;
+    Serial.printf("│ Temp: %.1f°C\n", temp);
   } else {
     doc["temp"] = nullptr;
+    Serial.println("│ Temp: null");
   }
   if (!isnan(humidity)) {
     doc["humidity"] = humidity;
+    Serial.printf("│ Humidity: %.1f%%\n", humidity);
   } else {
     doc["humidity"] = nullptr;
+    Serial.println("│ Humidity: null");
   }
   
   doc["alert"] = alert;
@@ -549,20 +579,21 @@ void sendToSupabase(float smoke, int flame, float temp, float humidity,
   String jsonData;
   serializeJson(doc, jsonData);
   
-  Serial.println("📤 Sending to Supabase...");
-  Serial.println("URL: " + sensorUrl);
-  Serial.println("Payload: " + jsonData);
+  Serial.println("│ Sending...");
   
   int httpCode = http.POST(jsonData);
   
   if (httpCode > 0) {
     String response = http.getString();
-    Serial.printf("✓ Sensor data sent (HTTP %d)\n", httpCode);
-    Serial.println("Response: " + response);
+    Serial.printf("│ ✓ HTTP %d - Success\n", httpCode);
+    if (response.length() > 0) {
+      Serial.printf("│ Response: %s\n", response.c_str());
+    }
   } else {
-    Serial.printf("❌ Sensor data failed: %s\n", http.errorToString(httpCode).c_str());
+    Serial.printf("│ ❌ HTTP Error: %s\n", http.errorToString(httpCode).c_str());
     errorCount++;
   }
+  Serial.println("└────────────────────────────┘");
   http.end();
   
   // Send alert if triggered
@@ -575,13 +606,17 @@ void sendToSupabase(float smoke, int flame, float temp, float humidity,
 }
 
 void sendAlert(float smoke, int flame, float temp, String message, String severity) {
+  Serial.println("\n┌─ 🚨 ALERT TRANSMISSION ─┐");
+  
   if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("❌ WiFi not connected - alert not sent");
+    Serial.println("│ ❌ WiFi not connected");
+    Serial.println("└────────────────────────┘");
     return;
   }
 
   HTTPClient http;
   String alertUrl = String(supabaseUrl) + "/rest/v1/alerts";
+  Serial.println("│ URL: /rest/v1/alerts");
   
   http.begin(alertUrl);
   http.addHeader("Content-Type", "application/json");
@@ -601,13 +636,18 @@ void sendAlert(float smoke, int flame, float temp, String message, String severi
   String jsonData;
   serializeJson(doc, jsonData);
   
+  Serial.printf("│ Severity: %s\n", severity.c_str());
+  Serial.printf("│ Message: %s\n", message.c_str());
+  Serial.println("│ Sending...");
+  
   int httpCode = http.POST(jsonData);
   
   if (httpCode > 0) {
-    Serial.printf("✓ Alert sent (HTTP %d)\n", httpCode);
+    Serial.printf("│ ✓ HTTP %d - Alert sent\n", httpCode);
   } else {
-    Serial.printf("❌ Alert failed: %s\n", http.errorToString(httpCode).c_str());
+    Serial.printf("│ ❌ HTTP Error: %s\n", http.errorToString(httpCode).c_str());
   }
+  Serial.println("└────────────────────────┘");
   http.end();
 }
 
@@ -680,10 +720,21 @@ void sendHealthReport() {
 
 void sendEnvironmentalData(float humidity) {
   // Only send environmental data if humidity is valid
-  if (WiFi.status() != WL_CONNECTED || isnan(humidity)) return;
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("\n⚠️  Environmental data: WiFi not connected");
+    return;
+  }
+  
+  if (isnan(humidity)) {
+    Serial.println("\n⚠️  Environmental data: Humidity invalid");
+    return;
+  }
+  
+  Serial.println("\n┌─ 🌍 ENVIRONMENTAL DATA ─┐");
   
   HTTPClient http;
   String envUrl = String(supabaseUrl) + "/rest/v1/environmental_data";
+  Serial.println("│ URL: /rest/v1/environmental_data");
   
   http.begin(envUrl);
   http.addHeader("Content-Type", "application/json");
@@ -698,7 +749,17 @@ void sendEnvironmentalData(float humidity) {
   String jsonData;
   serializeJson(doc, jsonData);
   
-  http.POST(jsonData);
+  Serial.printf("│ Humidity: %.1f%%\n", humidity);
+  Serial.println("│ Sending...");
+  
+  int httpCode = http.POST(jsonData);
+  
+  if (httpCode > 0) {
+    Serial.printf("│ ✓ HTTP %d - Success\n", httpCode);
+  } else {
+    Serial.printf("│ ❌ HTTP Error: %s\n", http.errorToString(httpCode).c_str());
+  }
+  Serial.println("└─────────────────────────┘");
   http.end();
 }
 
