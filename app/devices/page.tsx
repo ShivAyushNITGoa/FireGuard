@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/footer'
-import { Cpu, MapPin, Clock, Settings, ExternalLink, HardDrive, Wifi, Battery, Activity, AlertTriangle, CheckCircle2, Zap } from 'lucide-react'
+import { Cpu, MapPin, Clock, Settings, ExternalLink, HardDrive, Wifi, Battery, Activity, AlertTriangle, CheckCircle2, Zap, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { startAutoOfflineDetection, stopAutoOfflineDetection, getDeviceStatus } from '@/lib/auto-offline-checker'
 
@@ -48,13 +48,35 @@ export default function DevicesPage() {
     // Start auto-offline detection
     startAutoOfflineDetection()
 
-    // Subscribe to device status changes
+    // Subscribe to device status changes (including deletions)
     const channel = supabase
       .channel('device_changes')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
+          schema: 'public',
+          table: 'devices',
+        },
+        () => {
+          fetchDevices()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'devices',
+        },
+        () => {
+          fetchDevices()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
           schema: 'public',
           table: 'devices',
         },
@@ -94,7 +116,14 @@ export default function DevicesPage() {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (data && !error) {
+    if (error) {
+      console.error('Error fetching devices:', error)
+      setLoading(false)
+      return
+    }
+
+    if (data) {
+      console.log('Fetched devices from database:', data)
       setDevices(data)
     }
     setLoading(false)
@@ -177,6 +206,58 @@ export default function DevicesPage() {
     return `${minutes}m`
   }
 
+  const handleRemoveOtherDevices = async () => {
+    if (devices.length <= 1) {
+      alert('Only one device registered. Nothing to remove.')
+      return
+    }
+
+    // Get all devices ordered by created_at ascending to find the original
+    const { data: allDevices, error } = await supabase
+      .from('devices')
+      .select('*')
+      .order('created_at', { ascending: true })
+
+    if (error || !allDevices || allDevices.length === 0) {
+      alert('Could not fetch devices')
+      return
+    }
+
+    const originalDevice = (allDevices as Device[])[0] // First one is oldest (original)
+    const otherDevices = (allDevices as Device[]).filter(d => d.id !== originalDevice.id)
+
+    if (!confirm(`Remove ${otherDevices.length} other device(s) except "${originalDevice.name}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      for (const device of otherDevices) {
+        const { error } = await supabase
+          .from('devices')
+          .delete()
+          .eq('id', device.id)
+
+        if (error) throw error
+      }
+
+      // Wait a moment for database to sync
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Refresh devices list
+      await fetchDevices()
+      
+      // Force page refresh
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000)
+      
+      alert(`Removed ${otherDevices.length} device(s). Only "${originalDevice.name}" remains.`)
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Failed to remove devices: ${errorMsg}`)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -193,9 +274,20 @@ export default function DevicesPage() {
       <Navigation />
       
       <main className="container mx-auto px-4 py-6 md:py-8">
-        <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold">Devices</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Manage your connected fire safety devices</p>
+        <div className="flex items-center justify-between mb-6 md:mb-8">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">Devices</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Manage your connected fire safety devices</p>
+          </div>
+          {devices.length > 1 && (
+            <Button 
+              variant="destructive" 
+              onClick={handleRemoveOtherDevices}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Remove Other Devices
+            </Button>
+          )}
         </div>
 
         {devices.length === 0 ? (
