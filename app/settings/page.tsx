@@ -153,6 +153,7 @@ export default function SettingsPage() {
     try {
       // Notification preferences are stored in user_profiles table
       // This is a placeholder for future implementation
+      // TODO: Implement notification preferences saving
       setMessage('✓ Notification preferences saved successfully!')
       setTimeout(() => setMessage(''), 5000)
     } catch (error) {
