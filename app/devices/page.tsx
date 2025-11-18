@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/footer'
-import { Cpu, MapPin, Clock, Plus, Power, Settings, ExternalLink, HardDrive, Wifi, Battery, Activity, AlertTriangle, CheckCircle2, Zap } from 'lucide-react'
+import { Cpu, MapPin, Clock, Settings, ExternalLink, HardDrive, Wifi, Battery, Activity, AlertTriangle, CheckCircle2, Zap } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { startAutoOfflineDetection, stopAutoOfflineDetection, getDeviceStatus } from '@/lib/auto-offline-checker'
 
@@ -193,15 +193,9 @@ export default function DevicesPage() {
       <Navigation />
       
       <main className="container mx-auto px-4 py-6 md:py-8">
-        <div className="flex items-center justify-between mb-6 md:mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Devices</h1>
-            <p className="text-sm md:text-base text-muted-foreground">Manage your connected fire safety devices</p>
-          </div>
-          <Button onClick={() => alert('Devices auto-register when powered on with proper Supabase credentials configured in firmware')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Device
-          </Button>
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold">Devices</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Manage your connected fire safety devices</p>
         </div>
 
         {devices.length === 0 ? (
@@ -209,13 +203,9 @@ export default function DevicesPage() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Cpu className="h-16 w-16 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No Devices Found</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Add your first ESP32 device to start monitoring
+              <p className="text-sm text-muted-foreground">
+                Power on your ESP32 device with Supabase credentials configured to auto-register
               </p>
-              <Button onClick={() => alert('Devices auto-register when powered on with proper Supabase credentials configured in firmware')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Device
-              </Button>
             </CardContent>
           </Card>
         ) : (
