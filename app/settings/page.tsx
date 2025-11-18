@@ -158,7 +158,7 @@ export default function SettingsPage() {
       const { error } = await supabase
         .from('user_profiles')
         .update({
-          receive_alerts: notifications.email,
+          receive_alerts: notifications.email || false,
         })
         .eq('id', user.id)
 
