@@ -1,7 +1,12 @@
 /*
  * FireGuard Advanced - ESP32-S3 WROOM-1 Fire Safety Monitoring System
- * Version 3.0 - Enhanced Features (DHT11 reliability updates)
- * By TheGDevelopers (updated)
+ * Version 3.1 - ESP32-S3 Optimized
+ * By TheGDevelopers
+ * 
+ * ⭐ ESP32-S3 ONLY - NOT compatible with Arduino Uno or regular ESP32
+ * Board: ESP32-S3 Dev Module
+ * Baud Rate: 115200
+ * Upload Speed: 921600
  */
 
 #include <WiFi.h>
@@ -9,6 +14,13 @@
 #include <ArduinoJson.h>
 #include <DHT.h>
 #include <esp_system.h>
+#include <esp32-hal.h>
+
+// ==================== ESP32-S3 SPECIFIC CONFIGURATION ====================
+// These settings are optimized for ESP32-S3 WROOM-1
+#define ESP32_S3_BOARD  // Confirm ESP32-S3 board
+#define CORE_CLOCK_MHZ 240  // ESP32-S3 runs at 240 MHz
+#define DUAL_CORE true      // ESP32-S3 has dual cores
 
 // ==================== CONFIGURATION ====================
 #define FIRMWARE_VERSION "3.0.0"
@@ -156,6 +168,23 @@ void setup() {
   Serial.println("║     🔥 FIREGUARD STARTING UP...       ║");
   Serial.println("╚════════════════════════════════════════╝");
   Serial.println("✓ Serial initialized at 115200 baud");
+  
+  // Verify ESP32-S3 Board
+  Serial.println("\n📋 Board Information:");
+  Serial.printf("  Chip Model: %s\n", ESP.getChipModel());
+  Serial.printf("  Chip Revision: %d\n", ESP.getChipRevision());
+  Serial.printf("  CPU Cores: %d\n", ESP.getChipCores());
+  Serial.printf("  CPU Frequency: %d MHz\n", ESP.getCpuFreqMHz());
+  Serial.printf("  Free Heap: %d bytes\n", ESP.getFreeHeap());
+  Serial.printf("  Total Heap: %d bytes\n", ESP.getHeapSize());
+  
+  // Verify this is ESP32-S3
+  if (strstr(ESP.getChipModel(), "ESP32-S3") == NULL) {
+    Serial.println("\n⚠️  WARNING: This code is optimized for ESP32-S3!");
+    Serial.println("   Current board may not be ESP32-S3");
+  } else {
+    Serial.println("\n✓ ESP32-S3 board detected!");
+  }
   delay(500);
   
   printBanner();
