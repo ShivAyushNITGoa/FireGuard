@@ -24,12 +24,24 @@ const char* supabaseUrl = "https://anznostcpknoxjpenbjl.supabase.co";
 const char* supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFuem5vc3RjcGtub3hqcGVuYmpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0OTI4NjAsImV4cCI6MjA3ODA2ODg2MH0.3Er2RmgxiRyaVN8eJL6zXF6GmY18QZj9y9sS74qrPGc";
 
 // Pin definitions
-#define MQ2_PIN 34          // ADC1_CH6 (Analog input)
-#define FLAME_PIN 35        // ADC1_CH7 (Digital input)
+#define MQ135_PIN 1         // GPIO1/ADC1_CH0 (Analog input - MQ135 smoke sensor)
+#define FLAME_PIN 2         // GPIO2 (Digital input - 3-pin IR flame sensor)
 #define DHT_PIN 4           // GPIO4 (Digital I/O) - Use with 10K pull-up resistor
 #define BUZZER_PIN 5        // GPIO5 (Digital output)
-#define LED_PIN 2           // GPIO2 (Built-in LED)
-#define BATTERY_PIN 36      // ADC1_CH0 (Analog input - optional)
+#define WARNING_LED_PIN 15  // GPIO15 (Warning LED - for medium severity)
+#define ALERT_LED_PIN 16    // GPIO16 (Alert LED - for high/critical severity)
+#define BATTERY_PIN 3       // GPIO3/ADC1_CH2 (Analog input - optional)
+
+// 3-pin IR Flame Sensor Configuration
+// This sensor has 3 pins: VCC, GND, and DO (Digital Output)
+// Wiring:
+//   - VCC -> 3.3V or 5V
+//   - GND -> GND
+//   - DO (Digital Output) -> GPIO2
+// Output behavior:
+//   - LOW (0) when flame detected
+//   - HIGH (1) when no flame detected
+// Note: Some modules have an onboard potentiometer to adjust sensitivity
 
 // Sensor configuration
 #define DHT_TYPE DHT11
@@ -39,9 +51,10 @@ DHT dht(DHT_PIN, DHT_TYPE);
 #define SENSOR_READ_INTERVAL 5000    // 5 seconds
 #define HEALTH_REPORT_INTERVAL 60000 // 1 minute
 #define WATCHDOG_TIMEOUT 30          // 30 seconds
+#define LED_BLINK_INTERVAL 300       // LED blink interval in ms for alerts
 
 // Thresholds
-#define GAS_THRESHOLD 400
+#define SMOKE_THRESHOLD 600     // MQ135 smoke/air quality threshold (adjust based on calibration)
 #define TEMP_THRESHOLD 45.0
 #define BATTERY_LOW_THRESHOLD 3.3
 
@@ -53,7 +66,7 @@ int errorCount = 0;
 int consecutiveErrors = 0;
 
 // Calibration offsets
-float gasOffset = 0.0;
+float smokeOffset = 0.0;
 float tempOffset = 0.0;
 
 // Health metrics
@@ -67,12 +80,20 @@ float lastGoodTemp = 25.0;
 float lastGoodHumidity = 50.0;
 bool dhtWorking = false;
 
-// Gas sensor status
-bool gasWorking = false;
-float lastGoodGas = 0.0;
+// MQ135 smoke sensor status
+bool smokeWorking = false;
+float lastGoodSmoke = 0.0;
 
 // Flame sensor status
 bool flameWorking = false;
+
+// LED alert state
+bool warningActive = false;
+bool alertActive = false;
+unsigned long lastWarningLedToggle = 0;
+unsigned long lastAlertLedToggle = 0;
+bool warningLedState = false;
+bool alertLedState = false;
 
 // New constants for DHT handling
 const int DHT_INIT_ATTEMPTS = 3;
@@ -84,11 +105,13 @@ void connectWiFi();
 void performCalibration();
 void sendHealthReport();
 void updateHealthMetrics();
-void sendToSupabase(float gas, int flame, float temp, float humidity, bool alert, String message, String severity);
-void sendAlert(float gas, int flame, float temp, String message, String severity);
+void sendToSupabase(float smoke, int flame, float temp, float humidity, bool alert, String message, String severity);
+void sendAlert(float smoke, int flame, float temp, String message, String severity);
 void sendEnvironmentalData(float humidity);
 void triggerBuzzer();
 void blinkLED(int times);
+void blinkWarningLED();
+void blinkAlertLED();
 void handleError(String errorType);
 void printBanner();
 
@@ -129,15 +152,17 @@ void setup() {
   
   printBanner();
   
-  // Initialize pins (analog pins don't need OUTPUT/INPUT set for ADC but harmless)
-  pinMode(MQ2_PIN, INPUT);
-  pinMode(FLAME_PIN, INPUT);
+  // Initialize pins
+  pinMode(MQ135_PIN, INPUT);
+  pinMode(FLAME_PIN, INPUT);  // 3-pin IR flame sensor digital output
   pinMode(BUZZER_PIN, OUTPUT);
-  pinMode(LED_PIN, OUTPUT);
+  pinMode(WARNING_LED_PIN, OUTPUT);
+  pinMode(ALERT_LED_PIN, OUTPUT);
   pinMode(BATTERY_PIN, INPUT);
   
   digitalWrite(BUZZER_PIN, LOW);
-  digitalWrite(LED_PIN, LOW);
+  digitalWrite(WARNING_LED_PIN, LOW);
+  digitalWrite(ALERT_LED_PIN, LOW);
   
   // Initialize DHT sensor with proper configuration
   Serial.println("\n🌡️ Initializing DHT11 sensor...");
@@ -183,40 +208,43 @@ void setup() {
     dhtWorking = false;
   }
   
-  // Test MQ-2 gas sensor
-  Serial.println("Testing MQ-2 gas sensor...");
+  // Test MQ135 smoke sensor
+  Serial.println("Testing MQ135 smoke/air quality sensor...");
   delay(1000);
-  int gasTest1 = analogRead(MQ2_PIN);
+  int smokeTest1 = analogRead(MQ135_PIN);
   delay(500);
-  int gasTest2 = analogRead(MQ2_PIN);
+  int smokeTest2 = analogRead(MQ135_PIN);
   
   // Check if sensor is connected (should read > 0 and vary slightly)
-  if (gasTest1 > 50 || gasTest2 > 50) {
-    Serial.println("✓ MQ-2 sensor detected");
-    Serial.printf("   Reading: %d PPM\n", gasTest1);
-    gasWorking = true;
-    lastGoodGas = gasTest1;
+  if (smokeTest1 > 50 || smokeTest2 > 50) {
+    Serial.println("✓ MQ135 sensor detected");
+    Serial.printf("   Reading: %d (Air Quality Index)\n", smokeTest1);
+    Serial.println("   Note: MQ135 detects smoke, CO2, NH3, benzene, alcohol");
+    smokeWorking = true;
+    lastGoodSmoke = smokeTest1;
   } else {
-    Serial.println("⚠ MQ-2 sensor not detected (readings too low)");
-    Serial.println("   Sensor may not be connected or needs warm-up time");
-    Serial.println("   System will send null for gas data");
-    gasWorking = false;
+    Serial.println("⚠ MQ135 sensor not detected (readings too low)");
+    Serial.println("   Sensor may not be connected or needs warm-up time (20-48hrs)");
+    Serial.println("   System will send null for smoke data");
+    smokeWorking = false;
   }
   
-  // Test Flame sensor
-  // NOTE: Flame sensors are unreliable for auto-detection
-  // Set flameWorking = true ONLY if you have a flame sensor physically connected
-  // By default, we assume NO flame sensor to avoid false detections
-  Serial.println("Testing Flame sensor...");
+  // Test 3-pin IR Flame sensor
+  Serial.println("Testing 3-pin IR Flame sensor...");
   
   // CONFIGURATION: Set this to true if you have a flame sensor connected
-  const bool FLAME_SENSOR_INSTALLED = false;  // Change to true if sensor connected
+  const bool FLAME_SENSOR_INSTALLED = true;  // Set to true for 3-pin IR sensor
   
   if (FLAME_SENSOR_INSTALLED) {
     delay(500);
     int flameTest = digitalRead(FLAME_PIN);
-    Serial.println("✓ Flame sensor configured as INSTALLED");
+    Serial.println("✓ 3-pin IR Flame sensor configured as INSTALLED");
+    Serial.println("   Wiring (3 pins):");
+    Serial.println("     - VCC -> 3.3V or 5V");
+    Serial.println("     - GND -> GND");
+    Serial.printf("     - DO (Digital Output) -> GPIO%d\n", FLAME_PIN);
     Serial.printf("   Current reading: %s\n", flameTest == LOW ? "FLAME DETECTED" : "Clear");
+    Serial.println("   Note: Sensor outputs LOW when flame detected, HIGH when clear");
     flameWorking = true;
   } else {
     Serial.println("⚠ Flame sensor configured as NOT INSTALLED");
@@ -266,6 +294,14 @@ void loop() {
     sendHealthReport();
   }
   
+  // Handle LED blinking for active warnings and alerts
+  if (warningActive) {
+    blinkWarningLED();
+  }
+  if (alertActive) {
+    blinkAlertLED();
+  }
+  
   delay(100);
 }
 
@@ -274,24 +310,24 @@ void readAndSendSensorData() {
   Serial.println("\n📊 Reading sensors...");
   
   // Read sensors
-  int gasRaw = 0;
-  bool gasDataValid = false;
+  int smokeRaw = 0;
+  bool smokeDataValid = false;
   
-  if (gasWorking) {
-    gasRaw = analogRead(MQ2_PIN);
+  if (smokeWorking) {
+    smokeRaw = analogRead(MQ135_PIN);
     // Validate reading (should be reasonable range)
-    if (gasRaw > 0 && gasRaw < 4095) {
-      gasDataValid = true;
-      lastGoodGas = gasRaw;
+    if (smokeRaw > 0 && smokeRaw < 4095) {
+      smokeDataValid = true;
+      lastGoodSmoke = smokeRaw;
     } else {
-      Serial.println("⚠ MQ-2 reading out of range");
+      Serial.println("⚠ MQ135 reading out of range");
     }
   }
   
-  // Read flame sensor only if working
+  // Read 3-pin IR flame sensor only if working
   int flameRaw = -1;  // -1 indicates no sensor
   if (flameWorking) {
-    flameRaw = digitalRead(FLAME_PIN);
+    flameRaw = digitalRead(FLAME_PIN);  // LOW = flame detected, HIGH = no flame
   }
   
   // Read DHT11 with retry and fallback
@@ -326,9 +362,9 @@ void readAndSendSensorData() {
   }
   
   // Apply calibration only if data is valid
-  float gas = NAN;
-  if (gasDataValid) {
-    gas = gasRaw + gasOffset;
+  float smoke = NAN;
+  if (smokeDataValid) {
+    smoke = smokeRaw + smokeOffset;
   }
   
   float displayedTemp = NAN;
@@ -339,10 +375,10 @@ void readAndSendSensorData() {
   }
   
   // Display readings
-  if (gasDataValid) {
-    Serial.printf("  Gas: %.0f PPM\n", gas);
+  if (smokeDataValid) {
+    Serial.printf("  Smoke/Air Quality: %.0f\n", smoke);
   } else {
-    Serial.println("  Gas: N/A (MQ-2 not working)");
+    Serial.println("  Smoke: N/A (MQ135 not working)");
   }
   
   if (dhtDataValid) {
@@ -362,7 +398,7 @@ void readAndSendSensorData() {
     Serial.println("  Flame: Clear");
   }
   
-  // Check for alerts
+  // Check for alerts and warnings
   bool alertTriggered = false;
   String alertMessage = "";
   String severity = "low";
@@ -372,13 +408,13 @@ void readAndSendSensorData() {
     alertTriggered = true;
     alertMessage = "🔥 FLAME DETECTED!";
     severity = "critical";
-  } else if (!isnan(gas) && gas > GAS_THRESHOLD && !isnan(displayedTemp) && displayedTemp > TEMP_THRESHOLD) {
+  } else if (!isnan(smoke) && smoke > SMOKE_THRESHOLD && !isnan(displayedTemp) && displayedTemp > TEMP_THRESHOLD) {
     alertTriggered = true;
-    alertMessage = "⚠ High gas and temperature detected!";
+    alertMessage = "⚠ High smoke and temperature detected!";
     severity = "high";
-  } else if (!isnan(gas) && gas > GAS_THRESHOLD) {
+  } else if (!isnan(smoke) && smoke > SMOKE_THRESHOLD) {
     alertTriggered = true;
-    alertMessage = "⚠ High gas level detected!";
+    alertMessage = "⚠ High smoke level detected!";
     severity = "medium";
   } else if (!isnan(displayedTemp) && displayedTemp > TEMP_THRESHOLD) {
     alertTriggered = true;
@@ -386,18 +422,37 @@ void readAndSendSensorData() {
     severity = "medium";
   }
   
-  // Trigger local alert
+  // Trigger local alert/warning with appropriate LED
   if (alertTriggered) {
     Serial.println("\n🚨 ALERT: " + alertMessage);
-    triggerBuzzer();
+    triggerBuzzer();  // Buzzer ON for all cases
+    
+    // Activate appropriate LED based on severity
+    if (severity == "critical" || severity == "high") {
+      // High severity - use ALERT LED (red)
+      alertActive = true;
+      warningActive = false;
+      digitalWrite(WARNING_LED_PIN, LOW);  // Turn off warning LED
+    } else {
+      // Medium/low severity - use WARNING LED (yellow/green)
+      warningActive = true;
+      alertActive = false;
+      digitalWrite(ALERT_LED_PIN, LOW);  // Turn off alert LED
+    }
+  } else {
+    // No alerts - turn off both LEDs
+    warningActive = false;
+    alertActive = false;
+    digitalWrite(WARNING_LED_PIN, LOW);
+    digitalWrite(ALERT_LED_PIN, LOW);
   }
   
   // Send to Supabase; send NAN as null by using JSON null when appropriate
-  sendToSupabase(gas, flameRaw, displayedTemp, displayedHumidity, alertTriggered, alertMessage, severity);
+  sendToSupabase(smoke, flameRaw, displayedTemp, displayedHumidity, alertTriggered, alertMessage, severity);
 }
 
 // sendToSupabase and related functions unchanged except they will receive NANs which we handle by sending nulls
-void sendToSupabase(float gas, int flame, float temp, float humidity, 
+void sendToSupabase(float smoke, int flame, float temp, float humidity, 
                     bool alert, String message, String severity) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("❌ WiFi not connected");
@@ -416,9 +471,9 @@ void sendToSupabase(float gas, int flame, float temp, float humidity,
   StaticJsonDocument<512> doc;
   doc["device_id"] = DEVICE_ID;
   
-  // Only send gas if valid (not NAN)
-  if (!isnan(gas)) {
-    doc["gas"] = gas;
+  // Send smoke data as 'gas' column (MQ135 smoke sensor data stored in gas field)
+  if (!isnan(smoke)) {
+    doc["gas"] = smoke;
   } else {
     doc["gas"] = nullptr;
   }
@@ -466,14 +521,14 @@ void sendToSupabase(float gas, int flame, float temp, float humidity,
   
   // Send alert if triggered
   if (alert) {
-    sendAlert(gas, flame, temp, message, severity);
+    sendAlert(smoke, flame, temp, message, severity);
   }
   
   // Send environmental data
   sendEnvironmentalData(humidity);
 }
 
-void sendAlert(float gas, int flame, float temp, String message, String severity) {
+void sendAlert(float smoke, int flame, float temp, String message, String severity) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("❌ WiFi not connected - alert not sent");
     return;
@@ -489,7 +544,7 @@ void sendAlert(float gas, int flame, float temp, String message, String severity
   
   StaticJsonDocument<512> doc;
   doc["device_id"] = DEVICE_ID;
-  if (!isnan(gas)) doc["gas"] = gas; else doc["gas"] = nullptr;
+  if (!isnan(smoke)) doc["gas"] = smoke; else doc["gas"] = nullptr;
   if (flame != -1) doc["flame"] = flame; else doc["flame"] = nullptr;
   if (!isnan(temp)) doc["temp"] = temp; else doc["temp"] = nullptr;
   doc["message"] = message;
@@ -548,6 +603,7 @@ void sendHealthReport() {
   
   StaticJsonDocument<512> doc;
   doc["device_id"] = DEVICE_ID;
+  doc["status"] = "online";  // Device status
   doc["cpu_usage"] = cpuUsage;
   doc["memory_usage"] = memoryUsage;
   doc["wifi_signal"] = wifiSignal;
@@ -559,10 +615,19 @@ void sendHealthReport() {
   String jsonData;
   serializeJson(doc, jsonData);
   
+  Serial.println("📤 Sending health report...");
+  Serial.println("Payload: " + jsonData);
+  
   int httpCode = http.POST(jsonData);
   
   if (httpCode > 0) {
+    String response = http.getString();
     Serial.printf("✓ Health report sent (HTTP %d)\n", httpCode);
+    if (httpCode != 200 && httpCode != 201) {
+      Serial.println("Response: " + response);
+    }
+  } else {
+    Serial.printf("❌ Health report failed: %s\n", http.errorToString(httpCode).c_str());
   }
   http.end();
 }
@@ -595,15 +660,15 @@ void sendEnvironmentalData(float humidity) {
 void performCalibration() {
   Serial.println("\n🔧 Performing sensor calibration...");
   
-  float gasSum = 0;
+  float smokeSum = 0;
   float tempSum = 0;
   int tempValidSamples = 0;
   int samples = 10;
   
   for (int i = 0; i < samples; i++) {
-    // Only read gas sensor if it's working
-    if (gasWorking) {
-      gasSum += analogRead(MQ2_PIN);
+    // Only read smoke sensor if it's working
+    if (smokeWorking) {
+      smokeSum += analogRead(MQ135_PIN);
     }
     
     // Read DHT temperature sample but check validity
@@ -615,14 +680,14 @@ void performCalibration() {
     delay(100);
   }
   
-  float gasBaseline = gasSum / samples;
+  float smokeBaseline = smokeSum / samples;
   float tempBaseline = (tempValidSamples > 0) ? (tempSum / tempValidSamples) : NAN;
   
-  // Only apply gas offset if sensor is working (baseline > 50)
-  if (gasWorking && gasBaseline > 50) {
-    gasOffset = 0.0; // No offset needed for MQ-2, use raw values
+  // Only apply smoke offset if sensor is working (baseline > 50)
+  if (smokeWorking && smokeBaseline > 50) {
+    smokeOffset = 0.0; // No offset needed for MQ135, use raw values
   } else {
-    gasOffset = 0.0; // Sensor not working, no offset
+    smokeOffset = 0.0; // Sensor not working, no offset
   }
   
   // If we have a valid temp baseline, compute offset to align lastGoodTemp -> baseline (or zero)
@@ -633,10 +698,10 @@ void performCalibration() {
   }
   
   Serial.printf("✓ Calibration complete\n");
-  if (gasWorking) {
-    Serial.printf("  Gas baseline: %.1f PPM (offset: %.1f)\n", gasBaseline, gasOffset);
+  if (smokeWorking) {
+    Serial.printf("  Smoke baseline: %.1f (offset: %.1f)\n", smokeBaseline, smokeOffset);
   } else {
-    Serial.printf("  Gas sensor not detected - no calibration\n");
+    Serial.printf("  MQ135 smoke sensor not detected - no calibration\n");
   }
   if (!isnan(tempBaseline)) {
     Serial.printf("  Temp baseline: %.2f (no offset applied)\n", tempBaseline);
@@ -671,20 +736,43 @@ void connectWiFi() {
 void triggerBuzzer() {
   for (int i = 0; i < 3; i++) {
     digitalWrite(BUZZER_PIN, HIGH);
-    digitalWrite(LED_PIN, HIGH);
     delay(200);
     digitalWrite(BUZZER_PIN, LOW);
-    digitalWrite(LED_PIN, LOW);
     delay(200);
   }
 }
 
 void blinkLED(int times) {
+  // Used for system status indication (startup, etc.)
   for (int i = 0; i < times; i++) {
-    digitalWrite(LED_PIN, HIGH);
+    digitalWrite(WARNING_LED_PIN, HIGH);
+    digitalWrite(ALERT_LED_PIN, HIGH);
     delay(100);
-    digitalWrite(LED_PIN, LOW);
+    digitalWrite(WARNING_LED_PIN, LOW);
+    digitalWrite(ALERT_LED_PIN, LOW);
     delay(100);
+  }
+}
+
+void blinkWarningLED() {
+  unsigned long currentMillis = millis();
+  
+  // Toggle WARNING LED at defined interval (medium severity)
+  if (currentMillis - lastWarningLedToggle >= LED_BLINK_INTERVAL) {
+    lastWarningLedToggle = currentMillis;
+    warningLedState = !warningLedState;
+    digitalWrite(WARNING_LED_PIN, warningLedState ? HIGH : LOW);
+  }
+}
+
+void blinkAlertLED() {
+  unsigned long currentMillis = millis();
+  
+  // Toggle ALERT LED at defined interval (high/critical severity)
+  if (currentMillis - lastAlertLedToggle >= LED_BLINK_INTERVAL) {
+    lastAlertLedToggle = currentMillis;
+    alertLedState = !alertLedState;
+    digitalWrite(ALERT_LED_PIN, alertLedState ? HIGH : LOW);
   }
 }
 

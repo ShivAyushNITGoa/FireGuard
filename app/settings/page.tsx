@@ -51,6 +51,14 @@ export default function SettingsPage() {
   })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [savingNotifications, setSavingNotifications] = useState(false)
+  const [exportFilters, setExportFilters] = useState({
+    startDate: '',
+    endDate: '',
+    deviceId: 'ESP32_001',
+    limit: 10000,
+    format: 'csv' as 'csv' | 'json' | 'xlsx' | 'xml',
+  })
 
   useEffect(() => {
     fetchThresholds()
@@ -137,6 +145,172 @@ export default function SettingsPage() {
       console.error('Error saving settings:', error)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSaveNotifications = async () => {
+    setSavingNotifications(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { error } = await supabase
+        .from('notification_preferences')
+        .upsert({
+          user_id: user.id,
+          email_enabled: notifications.email,
+          sms_enabled: notifications.sms,
+          push_enabled: notifications.push,
+        }, { onConflict: 'user_id' })
+
+      if (error) throw error
+      setMessage('✓ Notification preferences saved successfully!')
+      setTimeout(() => setMessage(''), 5000)
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      setMessage(`❌ Error saving preferences: ${errorMsg}`)
+      console.error('Error:', error)
+    } finally {
+      setSavingNotifications(false)
+    }
+  }
+
+  const handleExportData = async () => {
+    try {
+      let query = supabase
+        .from('sensor_data')
+        .select('*')
+
+      // Apply device filter
+      if (exportFilters.deviceId) {
+        query = query.eq('device_id', exportFilters.deviceId)
+      }
+
+      // Apply date range filters
+      if (exportFilters.startDate) {
+        query = query.gte('time', `${exportFilters.startDate}T00:00:00`)
+      }
+      if (exportFilters.endDate) {
+        query = query.lte('time', `${exportFilters.endDate}T23:59:59`)
+      }
+
+      const { data, error } = await query
+        .order('time', { ascending: false })
+        .limit(exportFilters.limit)
+
+      if (error) throw error
+      if (!data || data.length === 0) throw new Error('No data found matching filters')
+
+      let fileContent: string
+      let mimeType: string
+      let fileExtension: string
+      const timestamp = new Date().toISOString().split('T')[0]
+
+      switch (exportFilters.format) {
+        case 'json':
+          fileContent = JSON.stringify(data, null, 2)
+          mimeType = 'application/json'
+          fileExtension = 'json'
+          break
+
+        case 'xml':
+          fileContent = generateXML(data)
+          mimeType = 'application/xml'
+          fileExtension = 'xml'
+          break
+
+        case 'xlsx':
+          // For XLSX, we'll create a simple CSV that Excel can open
+          // Full XLSX support would require a library
+          fileContent = generateCSV(data)
+          mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          fileExtension = 'xlsx'
+          break
+
+        case 'csv':
+        default:
+          fileContent = generateCSV(data)
+          mimeType = 'text/csv'
+          fileExtension = 'csv'
+          break
+      }
+
+      const blob = new Blob([fileContent], { type: mimeType })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `fireguard-data-${timestamp}.${fileExtension}`
+      a.click()
+      window.URL.revokeObjectURL(url)
+
+      setMessage(`✓ Data exported successfully as ${exportFilters.format.toUpperCase()}! (${data.length} records)`)
+      setTimeout(() => setMessage(''), 5000)
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      setMessage(`❌ Export failed: ${errorMsg}`)
+    }
+  }
+
+  const generateCSV = (data: any[]) => {
+    const csv = [
+      ['Time', 'Device ID', 'Gas (PPM)', 'Temperature (°C)', 'Humidity (%)', 'Flame'],
+      ...data.map((row) => [
+        row.time,
+        row.device_id,
+        row.gas,
+        row.temp,
+        row.humidity,
+        row.flame,
+      ]),
+    ]
+      .map((row) => row.map((cell) => `"${cell}"`).join(','))
+      .join('\n')
+    return csv
+  }
+
+  const generateXML = (data: any[]) => {
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<sensor_data>\n'
+    data.forEach((row) => {
+      xml += `  <record>\n`
+      xml += `    <time>${escapeXML(row.time)}</time>\n`
+      xml += `    <device_id>${escapeXML(row.device_id)}</device_id>\n`
+      xml += `    <gas>${row.gas}</gas>\n`
+      xml += `    <temperature>${row.temp}</temperature>\n`
+      xml += `    <humidity>${row.humidity}</humidity>\n`
+      xml += `    <flame>${row.flame}</flame>\n`
+      xml += `  </record>\n`
+    })
+    xml += '</sensor_data>'
+    return xml
+  }
+
+  const escapeXML = (str: string) => {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;')
+  }
+
+  const handleClearOldData = async () => {
+    if (!confirm('Delete sensor data older than 30 days? This cannot be undone!')) return
+
+    try {
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+      const { error } = await supabase
+        .from('sensor_data')
+        .delete()
+        .lt('time', thirtyDaysAgo.toISOString())
+
+      if (error) throw error
+      setMessage('✓ Old data cleared successfully!')
+      setTimeout(() => setMessage(''), 5000)
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      setMessage(`❌ Clear failed: ${errorMsg}`)
     }
   }
 
@@ -413,7 +587,7 @@ export default function SettingsPage() {
                   <div className="space-y-0.5">
                     <Label>SMS Notifications</Label>
                     <p className="text-sm text-muted-foreground">
-                      Receive alerts via SMS (requires Twilio)
+                      Receive alerts via SMS (CircuitDigest Cloud API)
                     </p>
                   </div>
                   <Switch
@@ -439,9 +613,19 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <div className="pt-4 border-t">
+                {message && (
+                  <div className={`p-3 rounded-md ${message.includes('Error') ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-700'}`}>
+                    {message}
+                  </div>
+                )}
+
+                <div className="pt-4 border-t space-y-4">
+                  <Button onClick={handleSaveNotifications} disabled={savingNotifications}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {savingNotifications ? 'Saving...' : 'Save Preferences'}
+                  </Button>
                   <p className="text-sm text-amber-600">
-                    Note: Notification features require additional setup with Supabase Edge Functions
+                    Note: Email alerts via Zapier and SMS via CircuitDigest are automatically triggered when alerts are created
                   </p>
                 </div>
               </CardContent>
@@ -474,15 +658,96 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t space-y-2">
-                  <p className="text-sm font-medium">Data Management</p>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      Export Data
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Clear Old Data
-                    </Button>
+                {message && (
+                  <div className={`p-3 rounded-md ${message.includes('Error') ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-700'}`}>
+                    {message}
+                  </div>
+                )}
+
+                <div className="pt-4 border-t space-y-4">
+                  <p className="text-sm font-medium">Export Filters & Format</p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="export-start">Start Date</Label>
+                      <Input
+                        id="export-start"
+                        type="date"
+                        value={exportFilters.startDate}
+                        onChange={(e) =>
+                          setExportFilters({ ...exportFilters, startDate: e.target.value })
+                        }
+                        max={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="export-end">End Date</Label>
+                      <Input
+                        id="export-end"
+                        type="date"
+                        value={exportFilters.endDate}
+                        onChange={(e) =>
+                          setExportFilters({ ...exportFilters, endDate: e.target.value })
+                        }
+                        max={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="export-device">Device ID</Label>
+                      <Input
+                        id="export-device"
+                        value={exportFilters.deviceId}
+                        onChange={(e) =>
+                          setExportFilters({ ...exportFilters, deviceId: e.target.value })
+                        }
+                        placeholder="e.g., ESP32_001"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="export-limit">Record Limit</Label>
+                      <Input
+                        id="export-limit"
+                        type="number"
+                        value={exportFilters.limit}
+                        onChange={(e) =>
+                          setExportFilters({ ...exportFilters, limit: parseInt(e.target.value) })
+                        }
+                        min="100"
+                        max="100000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="export-format">Export Format</Label>
+                      <select
+                        id="export-format"
+                        value={exportFilters.format}
+                        onChange={(e) =>
+                          setExportFilters({ ...exportFilters, format: e.target.value as any })
+                        }
+                        className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
+                      >
+                        <option value="csv">CSV (Spreadsheet)</option>
+                        <option value="json">JSON (Web/API)</option>
+                        <option value="xml">XML (Data Exchange)</option>
+                        <option value="xlsx">XLSX (Excel)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t space-y-2">
+                    <p className="text-sm font-medium">Data Management</p>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" onClick={handleExportData}>
+                        Export Data ({exportFilters.format.toUpperCase()})
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={handleClearOldData}>
+                        Clear Old Data (&gt;30 days)
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Export: Downloads sensor readings as CSV file (apply filters above)
+                      <br />
+                      Clear: Permanently deletes sensor data older than 30 days
+                    </p>
                   </div>
                 </div>
               </CardContent>

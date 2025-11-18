@@ -6,8 +6,11 @@ import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/footer'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { TrendingUp, Activity, AlertTriangle, Calendar } from 'lucide-react'
+import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceDot } from 'recharts'
+import { ZoomIn, ZoomOut } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { TrendingUp, Activity, AlertTriangle, Calendar, X } from 'lucide-react'
+import { Input } from '@/components/ui/input'
 
 type SensorReading = {
   time: string
@@ -39,45 +42,70 @@ export default function AnalyticsPage() {
     low: 0,
   })
   const [timeRange, setTimeRange] = useState('24h')
+  const [specificDate, setSpecificDate] = useState<string>('')  // YYYY-MM-DD format
   const [loading, setLoading] = useState(true)
+  const [zoomLevel, setZoomLevel] = useState(1)  // 1 = normal, 2 = 2x zoom, etc
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true)
 
     // Calculate time range
     const now = new Date()
-    const startTime = new Date()
-    switch (timeRange) {
-      case '1h':
-        startTime.setHours(now.getHours() - 1)
-        break
-      case '24h':
-        startTime.setHours(now.getHours() - 24)
-        break
-      case '7d':
-        startTime.setDate(now.getDate() - 7)
-        break
-      case '30d':
-        startTime.setDate(now.getDate() - 30)
-        break
+    let startTime = new Date()
+    let endTime = new Date()
+
+    // If specific date is selected, use that day only
+    if (specificDate) {
+      startTime = new Date(specificDate + 'T00:00:00')
+      endTime = new Date(specificDate + 'T23:59:59')
+    } else {
+      // Use time range filter
+      switch (timeRange) {
+        case '1h':
+          startTime.setHours(now.getHours() - 1)
+          break
+        case '24h':
+          startTime.setHours(now.getHours() - 24)
+          break
+        case '7d':
+          startTime.setDate(now.getDate() - 7)
+          break
+        case '30d':
+          startTime.setDate(now.getDate() - 30)
+          break
+      }
     }
 
-    // Fetch ALL sensor data in the time range
-    const { data: sensors, error: sensorError } = await supabase
+    // Fetch ALL sensor data in the time range (no limit to get all data)
+    let query = supabase
       .from('sensor_data')
-      .select('time, gas, temp, humidity, flame')
+      .select('time, gas, temp, humidity, flame', { count: 'exact' })
       .gte('time', startTime.toISOString())
-      .order('time', { ascending: true })  // Oldest to newest for chart
+
+    if (specificDate) {
+      query = query.lte('time', endTime.toISOString())
+    }
+
+    const { data: sensors, error: sensorError } = await query
+      .order('time', { ascending: false })  // Newest first, then reverse in chart
+      .limit(10000)  // Increase limit to fetch more data
 
     if (sensors && !sensorError) {
       setSensorData(sensors)
     }
 
-    // Fetch alert statistics
-    const { data: alerts, error: alertError } = await supabase
+    // Fetch alert statistics (no limit to get all alerts)
+    let alertQuery = supabase
       .from('alerts')
-      .select('severity')
-      .gte('time', startTime.toISOString()) as { data: Alert[] | null; error: any }
+      .select('severity', { count: 'exact' })
+      .gte('time', startTime.toISOString())
+
+    if (specificDate) {
+      alertQuery = alertQuery.lte('time', endTime.toISOString())
+    }
+
+    const { data: alerts, error: alertError } = await alertQuery
+      .limit(10000) as { data: Alert[] | null; error: any }
 
     if (alerts && !alertError) {
       const stats: AlertStats = {
@@ -91,14 +119,17 @@ export default function AnalyticsPage() {
     }
 
     setLoading(false)
-  }, [timeRange])
+  }, [timeRange, specificDate])
 
   useEffect(() => {
     fetchAnalytics()
   }, [fetchAnalytics])
 
   const formatChartData = () => {
-    return sensorData.map(d => {
+    // Reverse data so oldest is on left, newest on right
+    const reversedData = [...sensorData].reverse()
+    
+    return reversedData.map(d => {
       const date = new Date(d.time)
       let timeLabel = ''
       
@@ -135,16 +166,34 @@ export default function AnalyticsPage() {
           <p className="text-sm md:text-base text-muted-foreground">Historical data analysis and insights</p>
         </div>
           
-        <div className="flex items-center justify-between mb-8">
-          <div>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+          {/* Date Picker for Specific Day */}
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-muted-foreground" />
+            <Input
+              type="date"
+              value={specificDate}
+              onChange={(e) => setSpecificDate(e.target.value)}
+              className="w-40"
+              max={new Date().toISOString().split('T')[0]}
+            />
+            {specificDate && (
+              <button
+                onClick={() => setSpecificDate('')}
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                title="Clear date filter"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
           </div>
           
-          <Tabs value={timeRange} onValueChange={setTimeRange}>
+          <Tabs value={timeRange} onValueChange={specificDate ? undefined : setTimeRange}>
             <TabsList>
-              <TabsTrigger value="1h">1H</TabsTrigger>
-              <TabsTrigger value="24h">24H</TabsTrigger>
-              <TabsTrigger value="7d">7D</TabsTrigger>
-              <TabsTrigger value="30d">30D</TabsTrigger>
+              <TabsTrigger value="1h" disabled={!!specificDate}>1H</TabsTrigger>
+              <TabsTrigger value="24h" disabled={!!specificDate}>24H</TabsTrigger>
+              <TabsTrigger value="7d" disabled={!!specificDate}>7D</TabsTrigger>
+              <TabsTrigger value="30d" disabled={!!specificDate}>30D</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -203,11 +252,34 @@ export default function AnalyticsPage() {
         {/* Charts */}
         <div className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>All Sensor Readings</CardTitle>
-              <CardDescription>Temperature, Gas, and Humidity over time</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>All Sensor Readings</CardTitle>
+                <CardDescription>Temperature, Gas, and Humidity over time</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setZoomLevel(Math.max(1, zoomLevel - 0.5))}
+                  disabled={zoomLevel <= 1}
+                  title="Zoom out"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <span className="px-3 py-2 text-sm font-medium">{(zoomLevel * 100).toFixed(0)}%</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setZoomLevel(Math.min(5, zoomLevel + 0.5))}
+                  disabled={zoomLevel >= 5}
+                  title="Zoom in"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="overflow-x-auto">
+            <CardContent className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
               {loading ? (
                 <div className="h-[400px] flex items-center justify-center">
                   <p className="text-muted-foreground">Loading chart...</p>
@@ -217,8 +289,8 @@ export default function AnalyticsPage() {
                   <p className="text-muted-foreground">No data available for this time range</p>
                 </div>
               ) : (
-                <div className="min-w-[600px]">
-                  <ResponsiveContainer width="100%" height={300} className="sm:h-[400px]">
+                <div style={{ minWidth: `${1200 * zoomLevel}px` }}>
+                  <ResponsiveContainer width="100%" height={400}>
                   <AreaChart data={formatChartData()}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
@@ -254,11 +326,34 @@ export default function AnalyticsPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Sensor Trends</CardTitle>
-              <CardDescription>Individual sensor readings</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Sensor Trends</CardTitle>
+                <CardDescription>Individual sensor readings</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setZoomLevel(Math.max(1, zoomLevel - 0.5))}
+                  disabled={zoomLevel <= 1}
+                  title="Zoom out"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <span className="px-3 py-2 text-sm font-medium">{(zoomLevel * 100).toFixed(0)}%</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setZoomLevel(Math.min(5, zoomLevel + 0.5))}
+                  disabled={zoomLevel >= 5}
+                  title="Zoom in"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="overflow-x-auto">
+            <CardContent className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
               {loading ? (
                 <div className="h-[300px] flex items-center justify-center">
                   <p className="text-muted-foreground">Loading chart...</p>
@@ -268,8 +363,8 @@ export default function AnalyticsPage() {
                   <p className="text-muted-foreground">No data available for this time range</p>
                 </div>
               ) : (
-                <div className="min-w-[600px]">
-                  <ResponsiveContainer width="100%" height={300}>
+                <div style={{ minWidth: `${1200 * zoomLevel}px` }}>
+                  <ResponsiveContainer width="100%" height={350}>
                   <LineChart data={formatChartData()}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />

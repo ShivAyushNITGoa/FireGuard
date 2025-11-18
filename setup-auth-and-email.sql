@@ -93,7 +93,8 @@ CREATE INDEX IF NOT EXISTS idx_alert_subscriptions_device ON alert_subscriptions
 SELECT '✅ Step 2: Alert subscriptions table created' AS status;
 
 -- ==================== STEP 3: EMAIL NOTIFICATION FUNCTION ====================
--- Function to send email notifications (requires external email service)
+-- Function to send email notifications via Zapier webhook
+-- Note: Configure your Zapier webhook URL in zapier/zapier-webhook-trigger.sql
 CREATE OR REPLACE FUNCTION notify_users_on_alert()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -130,8 +131,8 @@ BEGIN
         ELSE 0
       END
   LOOP
-    -- Send notification via pg_notify
-    -- This will be picked up by your Edge Function or external service
+    -- Send notification via pg_notify for real-time updates
+    -- This can be picked up by your application or external service
     PERFORM pg_notify(
       'alert_email',
       json_build_object(
@@ -145,9 +146,9 @@ BEGIN
         'location', NEW.location,
         'gas', NEW.gas,
         'temp', NEW.temp,
-        'humidity', NEW.humidity,
+        'humidity', (SELECT humidity FROM sensor_data WHERE device_id = NEW.device_id ORDER BY time DESC LIMIT 1),
         'flame', NEW.flame,
-        'time', NEW.time
+        'time', COALESCE(NEW.time, NOW())
       )::text
     );
   END LOOP;
@@ -200,7 +201,7 @@ SELECT '' AS blank;
 SELECT '📋 NEXT STEPS:' AS next_steps;
 SELECT '1. Enable Email provider in Supabase Dashboard → Authentication → Providers' AS step_1;
 SELECT '2. Install npm packages: npm install @supabase/auth-helpers-nextjs' AS step_2;
-SELECT '3. Create auth files (see AUTH-AND-EMAIL-SETUP.md)' AS step_3;
-SELECT '4. Set up email service (Resend, SendGrid, or Supabase Edge Function)' AS step_4;
+SELECT '3. Set up Zapier webhook (see zapier/ZAPIER-SETUP-GUIDE.md)' AS step_3;
+SELECT '4. Configure zapier/zapier-webhook-trigger.sql with your webhook URL' AS step_4;
 SELECT '5. Test signup/login flow' AS step_5;
-SELECT '6. Subscribe to device alerts and test email notifications' AS step_6;
+SELECT '6. Subscribe to device alerts and test email notifications via Zapier' AS step_6;

@@ -70,16 +70,18 @@ export default function AdvancedAnalytics() {
         break
     }
 
-    // Fetch sensor data
+    // Fetch sensor data (no limit to get all data)
     const { data: sensorDataResult } = await supabase
       .from('sensor_data')
-      .select('time, gas, temp, flame')
+      .select('time, gas, temp, flame', { count: 'exact' })
       .gte('time', startTime.toISOString())
-      .order('time', { ascending: true })
-      .limit(100)
+      .order('time', { ascending: false })  // Newest first, then reverse in chart
+      .limit(10000)
 
     if (sensorDataResult) {
-      setSensorData(sensorDataResult.map((d: any) => ({
+      // Reverse data so oldest is on left, newest on right
+      const reversedData = [...sensorDataResult].reverse()
+      setSensorData(reversedData.map((d: any) => ({
         time: new Date(d.time).toLocaleTimeString(),
         gas: d.gas,
         temp: d.temp,
@@ -87,12 +89,13 @@ export default function AdvancedAnalytics() {
       })))
     }
 
-    // Fetch alerts
+    // Fetch alerts (no limit to get all alerts)
     const { data: alertsData } = await supabase
       .from('alerts')
-      .select('severity, time')
+      .select('severity, time', { count: 'exact' })
       .gte('time', startTime.toISOString())
       .order('time', { ascending: false })
+      .limit(10000)
 
     if (alertsData) {
       setAlerts(alertsData)
@@ -215,9 +218,10 @@ export default function AdvancedAnalytics() {
                 <CardTitle>Temperature & Gas Levels Over Time</CardTitle>
                 <CardDescription>Real-time monitoring of environmental conditions</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={350}>
-                  <AreaChart data={sensorData}>
+              <CardContent className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+                <div className="min-w-[1200px]">
+                  <ResponsiveContainer width="100%" height={350}>
+                    <AreaChart data={sensorData}>
                     <defs>
                       <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
@@ -237,7 +241,8 @@ export default function AdvancedAnalytics() {
                     <Area yAxisId="left" type="monotone" dataKey="temp" stroke="#ef4444" fillOpacity={1} fill="url(#colorTemp)" name="Temperature (°C)" />
                     <Area yAxisId="right" type="monotone" dataKey="gas" stroke="#8b5cf6" fillOpacity={1} fill="url(#colorGas)" name="Gas (PPM)" />
                   </AreaChart>
-                </ResponsiveContainer>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
 
@@ -247,9 +252,10 @@ export default function AdvancedAnalytics() {
                 <CardTitle>Individual Sensor Readings</CardTitle>
                 <CardDescription>Detailed breakdown of each sensor</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={sensorData}>
+              <CardContent className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+                <div className="min-w-[1200px]">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={sensorData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
                     <YAxis />
@@ -258,7 +264,8 @@ export default function AdvancedAnalytics() {
                     <Line type="monotone" dataKey="temp" stroke="#ef4444" strokeWidth={2} name="Temperature" />
                     <Line type="monotone" dataKey="gas" stroke="#8b5cf6" strokeWidth={2} name="Gas" />
                   </LineChart>
-                </ResponsiveContainer>
+                  </ResponsiveContainer>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
