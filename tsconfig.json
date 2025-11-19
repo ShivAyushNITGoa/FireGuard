@@ -17,6 +17,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "forceConsistentCasingInFileNames": true,
     "plugins": [
       {
         "name": "next"
@@ -51,9 +52,11 @@
   ],
   "exclude": [
     "node_modules",
-    "supabase",
+    "supabase/**/*",
+    "supabase/functions/**/*",
     ".next",
     "dist",
-    "build"
+    "build",
+    ".vercel"
   ]
 }

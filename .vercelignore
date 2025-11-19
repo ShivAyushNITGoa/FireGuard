@@ -1,9 +1,27 @@
+# Supabase Edge Functions (Deno runtime, not Next.js)
 supabase/
+supabase/**/*
+supabase/functions/
+supabase/functions/**/*
+
+# Git files
 .git/
 .gitignore
+.github/
+
+# Documentation
 README.md
 *.md
+docs/
+
+# Build artifacts
 node_modules/
 .next/
 dist/
 build/
+.vercel/
+
+# Environment
+.env
+.env.local
+.env.*.local
