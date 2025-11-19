@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Navigation } from '@/components/navigation'
 import { Footer } from '@/components/footer'
-import { Save, AlertTriangle, Bell, Database } from 'lucide-react'
+import { Save, AlertTriangle, Database } from 'lucide-react'
 
 type DeviceSettings = {
   id: string
@@ -44,14 +44,8 @@ export default function SettingsPage() {
     enable_buzzer: true,
     alert_cooldown_seconds: 60,
   })
-  const [notifications, setNotifications] = useState({
-    email: false,
-    sms: false,
-    push: false,
-  })
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
-  const [savingNotifications, setSavingNotifications] = useState(false)
   const [exportFilters, setExportFilters] = useState({
     startDate: '',
     endDate: '',
@@ -148,22 +142,6 @@ export default function SettingsPage() {
     }
   }
 
-  const handleSaveNotifications = async () => {
-    setSavingNotifications(true)
-    try {
-      // Notification preferences are stored in user_profiles table
-      // This is a placeholder for future implementation
-      // TODO: Implement notification preferences saving
-      setMessage('✓ Notification preferences saved successfully!')
-      setTimeout(() => setMessage(''), 5000)
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
-      setMessage(`❌ Error saving preferences: ${errorMsg}`)
-      console.error('Error:', error)
-    } finally {
-      setSavingNotifications(false)
-    }
-  }
 
   const handleExportData = async () => {
     try {
@@ -315,14 +293,10 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="thresholds" className="space-y-4 md:space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="thresholds" className="text-xs sm:text-sm">
               <AlertTriangle className="h-4 w-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Alert </span>Thresholds
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="text-xs sm:text-sm">
-              <Bell className="h-4 w-4 mr-1 sm:mr-2" />
-              Notifications
             </TabsTrigger>
             <TabsTrigger value="database" className="text-xs sm:text-sm">
               <Database className="h-4 w-4 mr-1 sm:mr-2" />
@@ -545,79 +519,6 @@ export default function SettingsPage() {
                   <Save className="h-4 w-4 mr-2" />
                   {saving ? 'Saving...' : 'Save Thresholds'}
                 </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="notifications">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>
-                  Choose how you want to receive fire safety alerts
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive alerts via email
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.email}
-                    onCheckedChange={(checked) =>
-                      setNotifications({ ...notifications, email: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>SMS Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive alerts via SMS (CircuitDigest Cloud API)
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.sms}
-                    onCheckedChange={(checked) =>
-                      setNotifications({ ...notifications, sms: checked })
-                    }
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Push Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Browser push notifications
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.push}
-                    onCheckedChange={(checked) =>
-                      setNotifications({ ...notifications, push: checked })
-                    }
-                  />
-                </div>
-
-                {message && (
-                  <div className={`p-3 rounded-md ${message.includes('Error') ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-700'}`}>
-                    {message}
-                  </div>
-                )}
-
-                <div className="pt-4 border-t space-y-4">
-                  <Button onClick={handleSaveNotifications} disabled={savingNotifications}>
-                    <Save className="h-4 w-4 mr-2" />
-                    {savingNotifications ? 'Saving...' : 'Save Preferences'}
-                  </Button>
-                  <p className="text-sm text-amber-600">
-                    Note: Email alerts via Zapier and SMS via CircuitDigest are automatically triggered when alerts are created
-                  </p>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
