@@ -1,0 +1,9 @@
+supabase/
+.git/
+.gitignore
+README.md
+*.md
+node_modules/
+.next/
+dist/
+build/

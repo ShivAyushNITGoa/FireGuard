@@ -21,6 +21,11 @@ const nextConfig = {
       net: false,
       tls: false,
     }
+    // Exclude supabase directory from webpack
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: ['**/supabase/**', '**/node_modules/**'],
+    }
     return config
   },
 }
