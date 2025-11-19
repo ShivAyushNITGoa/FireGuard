@@ -102,3 +102,6 @@ test-results/
 .env
 .env*.local
 .env.production
+
+# Supabase Edge Functions (Deno, not Next.js)
+supabase/functions/
