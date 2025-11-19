@@ -26,6 +26,6 @@
       "@/types/*": ["./types/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "supabase/functions/**/*"]
+  "include": ["app/**/*", "components/**/*", "lib/**/*", "types/**/*", "hooks/**/*", "next-env.d.ts"],
+  "exclude": ["node_modules", "supabase", ".next", "dist", "build"]
 }
