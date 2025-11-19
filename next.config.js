@@ -13,6 +13,11 @@ const nextConfig = {
       },
     ],
   },
+  typescript: {
+    // Ignore TypeScript errors in supabase directory (Deno runtime, not Next.js)
+    tsconfigPath: './tsconfig.json',
+    ignoreBuildErrors: false,
+  },
   webpack: (config, { isServer }) => {
     // Fix for webpack module resolution issues
     config.resolve.fallback = {
@@ -26,6 +31,11 @@ const nextConfig = {
       ...config.watchOptions,
       ignored: ['**/supabase/**', '**/node_modules/**'],
     }
+    // Ignore supabase directory in webpack
+    config.ignoreWarnings = [
+      ...config.ignoreWarnings || [],
+      { module: /supabase/ },
+    ]
     return config
   },
 }
