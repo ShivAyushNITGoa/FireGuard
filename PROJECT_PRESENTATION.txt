@@ -218,6 +218,8 @@ The system stores data in these main tables:
    • email (who to notify)
    • acknowledged status
    • timestamp
+   • sensor readings (gas, temp, humidity, flame)
+   • threshold values at time of alert (gas_threshold, temp_threshold, etc.)
 
 4. DEVICE_SETTINGS
    • gas_warning_threshold, gas_danger_threshold
@@ -271,10 +273,15 @@ WHEN A FIRE IS DETECTED:
       • Message (what was detected)
       • Device ID and location
       • Exact timestamp (when it happened)
-      • Temperature, gas, humidity readings
+      • Temperature, gas, humidity readings (actual sensor values)
+      • Threshold values that triggered the alert (as configured at alert time)
       • Action buttons (View Dashboard, Settings)
       • The GDevelopers branding
    └─ Sent to user's email address
+   
+   NOTE: Thresholds are captured at the moment the alert is created.
+   If you change thresholds later, it won't affect past alerts.
+   Future alerts will use the new threshold values.
 
 5. USER RECEIVES EMAIL
    └─ Email arrives in inbox
@@ -319,10 +326,46 @@ The system uses 4 severity levels:
    • Notification: Alert email + SMS + Local alarm
 
 ================================================================================
+                        THRESHOLD MANAGEMENT
+================================================================================
+
+IMPORTANT: Thresholds can be changed anytime in Settings!
+
+HOW THRESHOLDS WORK:
+1. Each device has configurable warning and danger thresholds
+2. When sensor data exceeds a threshold, an alert is created
+3. The alert captures the CURRENT threshold values at that moment
+4. Thresholds are stored in the DEVICE_SETTINGS table
+5. Changing thresholds affects FUTURE alerts only, not past ones
+
+CHANGING THRESHOLDS:
+1. Go to Settings page
+2. Click "Alert Thresholds" tab
+3. Adjust warning and danger levels for:
+   • Gas (PPM)
+   • Temperature (°C)
+   • Humidity (%)
+4. Click "Save Thresholds"
+5. New thresholds apply immediately to future alerts
+
+ALERT HISTORY:
+• Past alerts show the thresholds that were active when they were created
+• You can view what threshold triggered each alert
+• This helps track when you changed settings
+• Useful for auditing and compliance
+
+EXAMPLE:
+• Original threshold: Gas danger = 500 PPM
+• Alert created: "Gas level 520 PPM" (shows 500 PPM threshold)
+• You change threshold to: 400 PPM
+• Next alert: "Gas level 420 PPM" (shows 400 PPM threshold)
+• Past alert still shows: 500 PPM threshold (what was active then)
+
+================================================================================
                         CURRENT THRESHOLDS
 ================================================================================
 
-These are the default settings (can be customized):
+These are the default settings (can be customized anytime in Settings):
 
 TEMPERATURE:
   • Normal: Below 25°C
@@ -436,12 +479,11 @@ The web dashboard shows:
    • View alert details
 
 5. SETTINGS PAGE
-   • User profile
-   • Notification preferences
    • Alert thresholds per device
-   • Enable/disable alerts
-   • Quiet hours
-   • Timezone settings
+   • Enable/disable specific alerts
+   • Alert cooldown configuration
+   • Database export and management
+   • Data retention settings
 
 6. REAL-TIME UPDATES
    • Live sensor readings
@@ -453,38 +495,45 @@ The web dashboard shows:
                         NOTIFICATION SYSTEM
 ================================================================================
 
-FireGuard sends alerts through multiple channels:
+FireGuard sends alerts through multiple channels AUTOMATICALLY:
 
-1. EMAIL NOTIFICATIONS
+1. EMAIL NOTIFICATIONS (AUTOMATIC)
    • Professional HTML emails
    • Sent via Zapier + Gmail
    • Includes all alert details
    • Clickable action buttons
    • Branded with The GDevelopers logo
+   • No user configuration needed
 
-2. SMS NOTIFICATIONS (Planned)
+2. SMS NOTIFICATIONS (AUTOMATIC)
    • Text message to phone
    • Via CircuitDigest Cloud API
    • For critical alerts only
    • Instant delivery
+   • Triggered automatically by backend
 
-3. WEB NOTIFICATIONS
+3. WEB NOTIFICATIONS (AUTOMATIC)
    • Real-time dashboard updates
    • Browser notifications
    • Sound alerts (optional)
    • Visual indicators
+   • Instant display on dashboard
 
-4. LOCAL BUZZER
+4. LOCAL BUZZER (AUTOMATIC)
    • Device buzzer sounds immediately
    • Alerts people in the building
    • Loud and attention-grabbing
-   • Can be disabled in settings
+   • Triggered on critical events
 
-5. SMART COOLDOWN
+5. SMART COOLDOWN (AUTOMATIC)
    • 10-minute cooldown between alerts
    • Prevents email spam
    • Resets when condition clears
-   • Configurable per device
+   • Configurable per device in settings
+
+NOTE: All notifications are handled automatically by the system backend.
+Users do not need to configure notification preferences - they are triggered
+based on alert severity and device settings.
 
 ================================================================================
                         SECURITY FEATURES
