@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FireGuard Alert Notification</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #2c3e50;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+    }
+    .email-container {
+      max-width: 650px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    }
+    .header {
+      background: linear-gradient(135deg, {{step_1.severity_color}} 0%, {{step_1.severity_color}}cc 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 300px;
+      height: 300px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+    }
+    .header-content {
+      position: relative;
+      z-index: 1;
+    }
+    .alert-emoji {
+      font-size: 56px;
+      margin-bottom: 15px;
+      display: block;
+    }
+    .alert-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      letter-spacing: -0.5px;
+    }
+    .alert-subtitle {
+      font-size: 16px;
+      opacity: 0.95;
+      font-weight: 300;
+    }
+    .severity-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.25);
+      color: white;
+      padding: 8px 20px;
+      border-radius: 25px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 15px;
+      backdrop-filter: blur(10px);
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .alert-message-box {
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.05) 0%, rgba(220, 38, 38, 0.02) 100%);
+      border-left: 5px solid {{step_1.severity_color}};
+      padding: 20px;
+      margin-bottom: 30px;
+      border-radius: 6px;
+    }
+    .alert-message-label {
+      font-size: 12px;
+      color: #7f8c8d;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .alert-message-text {
+      font-size: 18px;
+      color: #2c3e50;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .info-card {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 18px;
+      transition: all 0.3s ease;
+    }
+    .info-card:hover {
+      border-color: {{step_1.severity_color}};
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    .info-label {
+      font-size: 11px;
+      color: #95a5a6;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .info-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #2c3e50;
+      word-break: break-word;
+    }
+    .info-value.critical {
+      color: #DC2626;
+    }
+    .info-value.warning {
+      color: #F59E0B;
+    }
+    .info-value.normal {
+      color: #10B981;
+    }
+    .location-banner {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .location-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+    .location-label {
+      font-size: 12px;
+      opacity: 0.9;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .location-value {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .timestamp-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .timestamp-label {
+      font-size: 11px;
+      color: #1e40af;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .timestamp-value {
+      font-size: 14px;
+      color: #1e3a8a;
+      font-weight: 600;
+    }
+    .device-info {
+      background: #f3f4f6;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 30px;
+      font-size: 13px;
+      color: #4b5563;
+    }
+    .device-info strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e9ecef;
+    }
+    .section-title-icon {
+      margin-right: 8px;
+    }
+    .safety-section {
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.08) 0%, rgba(220, 38, 38, 0.03) 100%);
+      border: 1px solid #fee2e2;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 30px;
+    }
+    .safety-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #DC2626;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+    }
+    .safety-title-icon {
+      margin-right: 10px;
+      font-size: 20px;
+    }
+    .safety-list {
+      list-style: none;
+      padding: 0;
+    }
+    .safety-list li {
+      padding: 10px 0;
+      padding-left: 28px;
+      position: relative;
+      color: #991b1b;
+      font-weight: 500;
+      line-height: 1.6;
+    }
+    .safety-list li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: #DC2626;
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .action-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    .action-button {
+      display: inline-block;
+      padding: 14px 24px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      text-align: center;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+    }
+    .action-button.primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+    }
+    .action-button.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+    }
+    .action-button.secondary {
+      background: #f3f4f6;
+      color: #2c3e50;
+      border: 1px solid #e9ecef;
+    }
+    .action-button.secondary:hover {
+      background: #e9ecef;
+    }
+    .footer {
+      background: #f8f9fa;
+      padding: 30px;
+      text-align: center;
+      border-top: 1px solid #e9ecef;
+    }
+    .footer-logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 12px;
+    }
+    .footer-text {
+      font-size: 12px;
+      color: #7f8c8d;
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+    .footer-links {
+      font-size: 12px;
+    }
+    .footer-links a {
+      color: #3b82f6;
+      text-decoration: none;
+      margin: 0 12px;
+      transition: color 0.3s ease;
+    }
+    .footer-links a:hover {
+      color: #2563eb;
+      text-decoration: underline;
+    }
+    .footer-copyright {
+      font-size: 11px;
+      color: #95a5a6;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e9ecef;
+    }
+    @media only screen and (max-width: 600px) {
+      .email-container {
+        border-radius: 0;
+      }
+      .header {
+        padding: 30px 20px;
+      }
+      .content {
+        padding: 25px 20px;
+      }
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+      .action-buttons {
+        grid-template-columns: 1fr;
+      }
+      .alert-title {
+        font-size: 24px;
+      }
+      .alert-emoji {
+        font-size: 48px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-content">
+        <span class="alert-emoji">{{step_1.severity_emoji}}</span>
+        <h1 class="alert-title">FireGuard Alert</h1>
+        <p class="alert-subtitle">Security Monitoring System</p>
+        <div class="severity-badge">{{step_1.severity}} Severity</div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- Alert Message -->
+      <div class="alert-message-box">
+        <div class="alert-message-label">Alert Message</div>
+        <div class="alert-message-text">{{step_1.message}}</div>
+      </div>
+
+      <!-- Timestamp -->
+      <div class="timestamp-box">
+        <div class="timestamp-label">⏰ Alert Time</div>
+        <div class="timestamp-value">{{step_1.timestamp}}</div>
+      </div>
+
+      <!-- Location -->
+      <div class="location-banner">
+        <div class="location-icon">📍</div>
+        <div class="location-label">Device Location</div>
+        <div class="location-value">{{step_1.location}}</div>
+      </div>
+
+      <!-- Device Info -->
+      <div class="device-info">
+        <strong>Device ID:</strong> {{step_1.device_id}} | <strong>Alert ID:</strong> {{step_1.alert_id}}
+      </div>
+
+      <!-- Sensor Readings -->
+      <div class="section-title">
+        <span class="section-title-icon">🌡️</span>Sensor Readings
+      </div>
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-label">Temperature</div>
+          <div class="info-value {{step_1.temp_class}}">{{step_1.temperature}}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Humidity</div>
+          <div class="info-value normal">{{step_1.humidity}}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Air Quality / Smoke</div>
+          <div class="info-value {{step_1.gas_class}}">{{step_1.gas_reading}}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Flame Detection</div>
+          <div class="info-value {{step_1.flame_class}}">{{step_1.flame_status}}</div>
+        </div>
+      </div>
+
+      <!-- Safety Instructions -->
+      {{step_1.safety_instructions}}
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <a href="{{step_1.dashboard_url}}" class="action-button primary">📊 View Dashboard</a>
+        <a href="{{step_1.settings_url}}" class="action-button secondary">⚙️ Manage Settings</a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="footer-logo">🔥 FireGuard</div>
+      <div class="footer-text">
+        Advanced Fire & Safety Monitoring System<br>
+        Powered by ESP32-S3 IoT Technology
+      </div>
+      <div class="footer-links">
+        <a href="https://fireguard.thegdevelopers.online">Website</a>
+        <a href="mailto:support@fireguard.com">Support</a>
+      </div>
+      <div class="footer-copyright">
+        © 2024 FireGuard by TheGDevelopers. All rights reserved.<br>
+        This is an automated alert from your FireGuard monitoring system.
+      </div>
+    </div>
+  </div>
+</body>
+</html>

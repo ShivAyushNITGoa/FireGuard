@@ -85,7 +85,44 @@ export default function AdvancedDashboard() {
           table: 'sensor_data',
         },
         (payload) => {
-          setLatestData(payload.new as SensorData)
+          const newData = payload.new as SensorData
+          setLatestData(newData)
+          
+          // IMPORTANT: Manually trigger threshold check for new sensor data
+          console.log('📊 New sensor data received:', newData)
+          const { checkThresholds } = require('@/lib/threshold-monitor')
+          checkThresholds(newData)
+        }
+      )
+      .subscribe()
+
+    // Subscribe to REAL-TIME ALERTS from firmware
+    // This ensures alerts show up immediately in the web app
+    const alertChannel = supabase
+      .channel('firmware_alerts')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'alerts',
+        },
+        (payload) => {
+          // Refresh stats to show new alert count
+          fetchStats()
+          
+          // Show browser notification for critical alerts
+          const alert = payload.new as any
+          if (alert.severity === 'critical' || alert.severity === 'high') {
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification('🚨 FireGuard Alert!', {
+                body: alert.message,
+                icon: '/fire-icon.png',
+                tag: 'fireguard-alert',
+                requireInteraction: true,
+              })
+            }
+          }
         }
       )
       .subscribe()
@@ -97,6 +134,7 @@ export default function AdvancedDashboard() {
     return () => {
       clearInterval(intervalId)
       supabase.removeChannel(sensorChannel)
+      supabase.removeChannel(alertChannel)
       stopThresholdMonitoring(thresholdChannel)
     }
   }, [])

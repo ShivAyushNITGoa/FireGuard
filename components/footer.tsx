@@ -53,22 +53,22 @@ export function Footer() {
             <h3 className="font-semibold mb-3">Resources</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <a href="https://github.com/ShivAyushNITGoa/FireGuard" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
                   Documentation
                 </a>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <a href="https://github.com/ShivAyushNITGoa/FireGuard" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
                   API Reference
                 </a>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <a href="https://github.com/ShivAyushNITGoa/FireGuard" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
                   Support
                 </a>
               </li>
               <li>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <a href="https://github.com/ShivAyushNITGoa/FireGuard" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
                   Privacy Policy
                 </a>
               </li>
@@ -81,8 +81,8 @@ export function Footer() {
             <ul className="space-y-2 text-sm">
               <li className="flex items-center gap-2 text-muted-foreground">
                 <Mail className="h-4 w-4" />
-                <a href="mailto:support@fireguard.com" className="hover:text-primary transition-colors">
-                  support@fireguard.com
+                <a href="mailto:thegdevelopers@gmail.com" className="hover:text-primary transition-colors">
+                  thegdevelopers@gmail.com
                 </a>
               </li>
               <li className="flex items-center gap-2 text-muted-foreground">

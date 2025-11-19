@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      line-height: 1.6;
+      color: #333;
+    }
+    .wrapper {
+      padding: 20px;
+    }
+    .container { 
+      max-width: 650px; 
+      margin: 0 auto;
+      background: white; 
+      border-radius: 16px; 
+      overflow: hidden; 
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    }
+    .header { 
+      background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%); 
+      color: white; 
+      padding: 50px 30px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 300px;
+      height: 300px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 50%;
+    }
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: -5%;
+      width: 200px;
+      height: 200px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 50%;
+    }
+    .header-content {
+      position: relative;
+      z-index: 1;
+    }
+    .header h1 { 
+      font-size: 36px; 
+      margin-bottom: 8px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .header p { 
+      font-size: 15px; 
+      opacity: 0.95;
+      font-weight: 500;
+    }
+    .content { 
+      padding: 45px 35px;
+    }
+    .alert-type-badge {
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 25px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .alert-type-badge.alert {
+      background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+      color: #991B1B;
+      border: 2px solid #DC2626;
+    }
+    .alert-type-badge.warning {
+      background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+      color: #92400E;
+      border: 2px solid #F59E0B;
+    }
+    .message-box { 
+      background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+      border-left: 6px solid #DC2626;
+      padding: 25px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+    .message-box h2 { 
+      color: #1F2937; 
+      font-size: 20px;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+    .message-box p { 
+      color: #374151; 
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    .details-section {
+      margin-bottom: 30px;
+    }
+    .details-section h3 {
+      font-size: 13px;
+      color: #6B7280;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 15px;
+    }
+    .details-grid{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    .detail-item{
+      background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+      padding: 18px;
+      border-radius: 8px;
+      border: 1px solid #E5E7EB;
+      transition: all 0.3s ease;
+    }
+    .detail-item:hover {
+      border-color: #DC2626;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);
+    }
+    .detail-label{
+      font-size: 11px;
+      color: #9CA3AF;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .detail-value{
+      font-size: 15px;
+      color: #1F2937;
+      font-weight: 600;
+    }
+    .action-buttons { 
+      display: flex; 
+      gap: 12px; 
+      margin: 35px 0; 
+      justify-content: center; 
+      flex-wrap: wrap;
+    }
+    .btn { 
+      display: inline-block; 
+      padding: 14px 32px; 
+      border-radius: 8px; 
+      text-decoration: none; 
+      font-weight: 700; 
+      font-size: 14px; 
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .btn-primary { 
+      background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+    }
+    .btn-primary:hover { 
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+    }
+    .btn-secondary { 
+      background: white;
+      color: #1F2937;
+      border: 2px solid #E5E7EB;
+    }
+    .btn-secondary:hover { 
+      border-color: #DC2626;
+      color: #DC2626;
+      background: #FEF2F2;
+    }
+    .info-box {
+      background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%);
+      border-left: 4px solid #10B981;
+      padding: 18px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+    }
+    .info-box p {
+      color: #065F46;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .divider { 
+      height: 2px; 
+      background: linear-gradient(90deg, transparent, #E5E7EB, transparent);
+      margin: 35px 0;
+    }
+    .footer { 
+      background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+      padding: 40px 35px;
+      text-align: center;
+      border-top: 1px solid #E5E7EB;
+    }
+    .footer-logo { 
+      margin-bottom: 20px;
+    }
+    .footer-logo a { 
+      color: #DC2626; 
+      text-decoration: none; 
+      font-weight: 800; 
+      font-size: 18px;
+      letter-spacing: -0.5px;
+      transition: all 0.3s ease;
+    }
+    .footer-logo a:hover { 
+      color: #991B1B;
+      text-decoration: underline;
+    }
+    .footer-divider {
+      height: 1px;
+      background: #E5E7EB;
+      margin: 15px 0;
+    }
+    .footer-text { 
+      color: #6B7280; 
+      font-size: 13px; 
+      line-height: 1.8;
+    }
+    .footer-text p {
+      margin: 8px 0;
+    }
+    .footer-text a { 
+      color: #DC2626; 
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    .footer-text a:hover { 
+      color: #991B1B;
+      text-decoration: underline;
+    }
+    .company-info {
+      background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .timestamp{
+      color: #9CA3AF;
+      font-size: 12px;
+      text-align: center;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #E5E7EB;
+    }
+    @media (max-width: 600px) {
+      .container { border-radius: 8px; }
+      .content { padding: 25px 20px; }
+      .header { padding: 35px 20px; }
+      .header h1 { font-size: 28px; }
+      .details-grid { grid-template-columns: 1fr; }
+      .action-buttons { flex-direction: column; }
+      .btn { width: 100%; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <!-- Header -->
+      <div class="header">
+        <div class="header-content">
+          <h1>{{step_2.severity_emoji}} {{step_2.alert_type}}</h1>
+          <p>{{step_2.system_name}}</p>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="content">
+        <!-- Alert Type Badge -->
+        <div class="alert-type-badge {{step_2.alert_type|lower}}">
+          {{step_2.severity_emoji}} {{step_2.alert_type}}: {{step_2.severity}}
+        </div>
+
+        <!-- Message -->
+        <div class="message-box">
+          <h2>{{step_2.message}}</h2>
+        </div>
+
+        <!-- Details Section -->
+        <div class="details-section">
+          <h3>📋 Alert Details</h3>
+          <div class="details-grid">
+            <div class="detail-item">
+              <div class="detail-label">🔧 Device</div>
+              <div class="detail-value">{{step_2.device_id}}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">📍 Location</div>
+              <div class="detail-value">{{step_2.location}}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">⚠️ Severity</div>
+              <div class="detail-value">{{step_2.severity}}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">🕐 Time</div>
+              <div class="detail-value">{{step_2.timestamp}}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info Box -->
+        <div class="info-box">
+          <p>
+            ✓ This is an automated {{step_2.alert_type|lower}} from your FireGuard system. 
+            Please review and take necessary action immediately.
+          </p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+          <a href="{{step_2.dashboard_url}}" class="btn btn-primary">📊 View Dashboard</a>
+          <a href="{{step_2.settings_url}}" class="btn btn-secondary">⚙️ Settings</a>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="divider"></div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <!-- Company Info -->
+        <div class="company-info">
+          🏢 {{step_2.system_name}}
+        </div>
+
+        <!-- Footer Logo -->
+        <div class="footer-logo">
+          <a href="{{step_2.company_url}}">{{step_2.company_name}}</a>
+        </div>
+
+        <!-- Footer Divider -->
+        <div class="footer-divider"></div>
+
+        <!-- Footer Text -->
+        <div class="footer-text">
+          <p>Advanced Fire & Safety Monitoring System</p>
+          <p style="margin-top: 12px;">
+            <a href="{{step_2.company_url}}">Visit {{step_2.company_name}}</a> | 
+            <a href="{{step_2.dashboard_url}}">Dashboard</a> | 
+            <a href="{{step_2.settings_url}}">Settings</a>
+          </p>
+          <p style="margin-top: 15px; font-size: 11px; color: #9CA3AF;">
+            © 2025 {{step_2.company_name}}. All rights reserved.<br>
+            This email was sent to {{step_2.email}}<br>
+            Sent: {{step_2.timestamp}}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

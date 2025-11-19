@@ -47,17 +47,29 @@ const lastAlertTime: Record<string, number> = {}
  */
 export async function checkThresholds(sensorData: SensorData) {
   try {
-    // Fetch device settings
+    console.log('🔍 Checking thresholds for device:', sensorData.device_id)
+    console.log('   Sensor data:', { gas: sensorData.gas, temp: sensorData.temp, humidity: sensorData.humidity, flame: sensorData.flame })
+    
+    // Fetch device settings - select only needed columns to avoid ambiguity
     const { data: settings, error: settingsError } = await supabase
       .from('device_settings')
-      .select('*')
+      .select('device_id, gas_warning_threshold, gas_danger_threshold, temp_warning_threshold, temp_danger_threshold, humidity_warning_threshold, humidity_danger_threshold, enable_gas_alerts, enable_temp_alerts, enable_flame_alerts, enable_buzzer, alert_cooldown_seconds')
       .eq('device_id', sensorData.device_id)
       .single() as { data: DeviceSettings | null; error: any }
 
     if (settingsError || !settings) {
-      console.warn('No settings found for device:', sensorData.device_id)
+      console.warn('❌ No settings found for device:', sensorData.device_id)
+      console.warn('   Error:', settingsError)
       return
     }
+
+    console.log('✓ Settings loaded:', {
+      gas_warning: settings.gas_warning_threshold,
+      gas_danger: settings.gas_danger_threshold,
+      temp_warning: settings.temp_warning_threshold,
+      temp_danger: settings.temp_danger_threshold,
+      cooldown: settings.alert_cooldown_seconds
+    })
 
     // Check cooldown period
     const now = Date.now()
@@ -66,6 +78,8 @@ export async function checkThresholds(sensorData: SensorData) {
 
     if (now - lastAlert < cooldownMs) {
       // Still in cooldown period, skip alert
+      const timeUntilNextAlert = Math.ceil((cooldownMs - (now - lastAlert)) / 1000)
+      console.log(`⏳ Still in cooldown period. Next alert possible in ${timeUntilNextAlert} seconds`)
       return
     }
 
@@ -225,7 +239,27 @@ export async function checkThresholds(sensorData: SensorData) {
       const criticalAlert = alerts.find(a => a.severity === 'critical')
       const alertToSend = criticalAlert || alerts[0]
 
-      const { error: alertError } = await supabase
+      console.log('📤 Creating alert:', {
+        device_id: alertToSend.device_id,
+        message: alertToSend.message,
+        severity: alertToSend.severity,
+        gas: alertToSend.gas,
+        temp: alertToSend.temp,
+        humidity: alertToSend.humidity,
+        flame: alertToSend.flame,
+      })
+
+      // Get user email for alert notification
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('email')
+        .eq('receive_alerts', true)
+        .limit(1)
+        .single() as { data: { email: string } | null; error: any }
+
+      const alertEmail = userProfile?.email || 'admin@fireguard.com'
+
+      const { error: alertError, data: alertData } = await supabase
         .from('alerts')
         .insert({
           device_id: alertToSend.device_id,
@@ -236,15 +270,26 @@ export async function checkThresholds(sensorData: SensorData) {
           humidity: alertToSend.humidity,
           flame: alertToSend.flame,
           time: new Date().toISOString(),
+          location: 'Building A - Floor 1',
+          email: alertEmail,
+          acknowledged: false,
+          acknowledged_at: null,
+          acknowledged_by: null,
         } as any)
 
       if (alertError) {
-        console.error('Error creating alert:', alertError)
+        console.error('❌ Error creating alert:', alertError)
+        console.error('   Details:', alertError.message)
       } else {
         // Update last alert time
         lastAlertTime[sensorData.device_id] = now
-        console.log('✓ Alert created:', alertToSend.message)
+        console.log('✅ Alert created successfully:', alertToSend.message)
+        console.log('   Severity:', alertToSend.severity)
+        console.log('   Device:', sensorData.device_id)
+        console.log('   Cooldown until:', new Date(now + cooldownMs).toLocaleTimeString())
       }
+    } else {
+      console.log('✓ No alerts triggered - all values within thresholds')
     }
   } catch (error) {
     console.error('Error in threshold monitoring:', error)
