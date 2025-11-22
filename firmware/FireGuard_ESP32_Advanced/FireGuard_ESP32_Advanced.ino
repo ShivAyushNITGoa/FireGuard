@@ -152,6 +152,9 @@ void setup() {
   // Connect to WiFi
   connectWiFi();
   
+  // Keep pin 15 LED (green) always ON
+  digitalWrite(WARNING_LED_PIN, HIGH);
+  
   // Record boot time
   bootTime = millis();
   
@@ -847,11 +850,14 @@ bool readDHTWithRetries(float &outTemp, float &outHumidity, int attempts) {
 
 // ==================== ALERT FUNCTIONS ====================
 void triggerBuzzer() {
-  for (int i = 0; i < 3; i++) {
-    digitalWrite(BUZZER_PIN, HIGH);
-    delay(200);
-    digitalWrite(BUZZER_PIN, LOW);
-    delay(200);
+  // Buzzer triggers when flame is detected
+  if (flameWorking && flame == LOW) {
+    for (int i = 0; i < 5; i++) {
+      digitalWrite(BUZZER_PIN, HIGH);
+      delay(300);
+      digitalWrite(BUZZER_PIN, LOW);
+      delay(300);
+    }
   }
 }
 
