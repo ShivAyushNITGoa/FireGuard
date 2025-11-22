@@ -1,18 +1,7 @@
 {
   "version": 2,
-  "buildCache": {
-    "nodeModulesPattern": "**/node_modules/**"
-  },
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "framework": "nextjs",
-  "outputDirectory": ".next",
-  "regions": ["sin1"],
-  "functions": {
-    "app/**/*.tsx": {
-      "memory": 1024,
-      "maxDuration": 60
-    }
-  }
+  "framework": "nextjs"
 }
